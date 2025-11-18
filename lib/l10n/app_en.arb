@@ -1,0 +1,22 @@
+{
+    "@@locale": "en",
+    "settings": "Settings",
+    "home": "Home",
+    "chat": "Chat",
+    "report": "Report",
+    "botSettings": "Bot Settings",
+    "myPackage": "My Package",
+    "profile": "Profile",
+    "logout": "Logout",
+    "editProfile": "Edit Profile",
+    "joyinUser": "Joyin User",
+    "confirmLogout": "Confirm Logout",
+    "areYouSureYouWantToLogout": "Are you sure you want to logout?",
+    "no": "No",
+    "yes": "Yes",
+    "privacyAndSecurity": "Privacy & Security",
+    "notifications": "Notifications",
+    "languageAndRegion": "Language & Region",
+    "language": "Language",
+    "chooseLanguage": "Choose your preferred language"
+}

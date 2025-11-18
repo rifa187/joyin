@@ -1,0 +1,22 @@
+{
+    "@@locale": "id",
+    "settings": "Pengaturan",
+    "home": "Beranda",
+    "chat": "Obrolan",
+    "report": "Laporan",
+    "botSettings": "Pengaturan Bot",
+    "myPackage": "Paket Saya",
+    "profile": "Profil",
+    "logout": "Keluar",
+    "editProfile": "Ubah Profil",
+    "joyinUser": "Pengguna Joyin",
+    "confirmLogout": "Konfirmasi Keluar",
+    "areYouSureYouWantToLogout": "Apakah Anda yakin ingin keluar?",
+    "no": "Tidak",
+    "yes": "Ya",
+    "privacyAndSecurity": "Privasi & Keamanan",
+    "notifications": "Notifikasi",
+    "languageAndRegion": "Bahasa & Regional",
+    "language": "Bahasa",
+    "chooseLanguage": "Pilih bahasa pilihan Anda"
+}
