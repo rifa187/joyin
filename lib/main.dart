@@ -13,6 +13,8 @@ import 'package:joyin/dashboard/dashboard_page.dart';
 
 import 'package:joyin/providers/dashboard_provider.dart';
 
+final navigatorKey = GlobalKey<NavigatorState>(); // Global key
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
@@ -44,6 +46,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<LocaleProvider>(
         builder: (context, provider, child) {
           return MaterialApp(
+            navigatorKey: navigatorKey, // Assign key
             locale: provider.locale,
             debugShowCheckedModeBanner: false,
             theme: ThemeData(primarySwatch: Colors.blue),
@@ -65,28 +68,44 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
   @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    FirebaseAuth.instance.authStateChanges().listen((User? user) {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) return;
+
+      if (user == null) {
+        // User is signed out -> Go to Onboarding
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const OnboardingPage()),
+          (route) => false,
+        );
+      } else {
+        // User is signed in -> Go to Dashboard
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+          (route) => false,
+        );
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
-
-        if (snapshot.hasData) {
-          return const DashboardPage();
-        }
-
-        return const OnboardingPage();
-      },
+    // Show a loading indicator while the listener decides where to go
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }

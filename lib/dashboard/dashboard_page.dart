@@ -1,6 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:joyin/auth/login_page.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:joyin/profile/settings_page.dart';
 import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
@@ -1246,7 +1248,9 @@ class _DashboardPageState extends State<DashboardPage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      onPressed: () {
+                      onPressed: () async {
+                        await GoogleSignIn().signOut(); // Sign out from Google
+                        await FirebaseAuth.instance.signOut(); // Sign out from Firebase
                         Navigator.of(context).pop();
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(
