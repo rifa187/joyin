@@ -34,10 +34,10 @@ class _SettingsPageState extends State<SettingsPage>
     return Scaffold(
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -45,11 +45,12 @@ class _SettingsPageState extends State<SettingsPage>
         title: Text(
           'Pengaturan',
           style: GoogleFonts.poppins(
-            color: Colors.black,
+            color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.joyin,

@@ -2,6 +2,8 @@
 import 'package:google_fonts/google_fonts.dart';
 import 'package:joyin/auth/auth_service.dart';
 import 'package:joyin/auth/backend_auth_service.dart';
+import 'package:joyin/package/package_info.dart';
+import 'package:joyin/screens/payment_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:joyin/providers/user_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,7 +23,8 @@ import 'register_page.dart';
 import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, this.selectedPackage});
+  final PackageInfo? selectedPackage;
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -40,6 +43,26 @@ class _LoginPageState extends State<LoginPage> {
       FirebaseAuthService(); // Use for Android Google login
   final LocalAuthService _localAuthService =
       LocalAuthService(); // Use for Android manual login
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCurrentUserAndNavigate();
+  }
+
+  void _checkCurrentUserAndNavigate() {
+    final firebaseUser = fb_auth.FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null) {
+      // If user is already logged in, handle the success flow immediately.
+      // Use a post-frame callback to safely navigate after the build phase.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          final appUser = _convertFirebaseUserToAppUser(firebaseUser);
+          _handleLoginSuccess(appUser);
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -62,16 +85,32 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _handleLoginSuccess(User user) async {
     if (!mounted) return;
+    Provider.of<UserProvider>(context, listen: false).setUser(user);
 
-    final prefs = await SharedPreferences.getInstance();
-    final hasPurchased = prefs.getBool('has_purchased_package') ?? false;
+    if (widget.selectedPackage != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PaymentScreen(
+            packageName: widget.selectedPackage!.name,
+            packagePrice: widget.selectedPackage!.price,
+            packageFeatures: widget.selectedPackage!.features,
+          ),
+        ),
+      );
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      final hasPurchased = prefs.getBool('has_purchased_package') ?? false;
 
-    final updatedUser = user.copyWith(hasPurchasedPackage: hasPurchased);
-    if (!mounted) return;
-    Provider.of<UserProvider>(context, listen: false).setUser(updatedUser);
-
-    // The AuthWrapper in main.dart will now handle navigation based on UserProvider state.
-    // No explicit navigation needed here.
+      if (hasPurchased) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+        );
+      }
+    }
   }
 
   void _showErrorSnackBar(String message) {
@@ -262,7 +301,9 @@ class _LoginPageState extends State<LoginPage> {
                         GestureDetector(
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => const RegisterPage(),
+                              builder: (_) => RegisterPage(
+                                selectedPackage: widget.selectedPackage,
+                              ),
                             ),
                           ),
                           child: Text(

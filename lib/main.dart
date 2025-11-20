@@ -1,19 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:joyin/firebase_options.dart';
-import 'package:joyin/onboarding/onboarding_page.dart';
+import 'package:joyin/auth/auth_gate.dart';
+import 'package:joyin/gen_l10n/app_localizations.dart';
+import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/locale_provider.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:joyin/gen_l10n/app_localizations.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:joyin/dashboard/dashboard_page.dart';
-
-import 'package:joyin/providers/dashboard_provider.dart';
-
-final navigatorKey = GlobalKey<NavigatorState>(); // Global key
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +41,6 @@ class MyApp extends StatelessWidget {
       child: Consumer<LocaleProvider>(
         builder: (context, provider, child) {
           return MaterialApp(
-            navigatorKey: navigatorKey, // Assign key
             locale: provider.locale,
             debugShowCheckedModeBanner: false,
             theme: ThemeData(primarySwatch: Colors.blue),
@@ -60,51 +54,9 @@ class MyApp extends StatelessWidget {
               Locale('en'), // English
               Locale('id'), // Indonesian
             ],
-            home: const AuthWrapper(),
+            home: const AuthGate(),
           );
         },
-      ),
-    );
-  }
-}
-
-class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      final navigator = navigatorKey.currentState;
-      if (navigator == null) return;
-
-      if (user == null) {
-        // User is signed out -> Go to Onboarding
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const OnboardingPage()),
-          (route) => false,
-        );
-      } else {
-        // User is signed in -> Go to Dashboard
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DashboardPage()),
-          (route) => false,
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Show a loading indicator while the listener decides where to go
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
       ),
     );
   }

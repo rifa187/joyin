@@ -96,13 +96,14 @@ class PaymentScreenState extends State<PaymentScreen> {
           'Checkout',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.white,
           ),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         child: Padding(

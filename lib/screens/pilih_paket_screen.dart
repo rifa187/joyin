@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:joyin/core/user_model.dart';
+import 'package:joyin/auth/login_page.dart';
+import 'package:joyin/package/package_info.dart';
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/providers/user_provider.dart';
-import 'package:joyin/screens/payment_screen.dart';
 import 'package:provider/provider.dart';
 
 class PilihPaketScreen extends StatelessWidget {
@@ -12,7 +11,6 @@ class PilihPaketScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final packageProvider = Provider.of<PackageProvider>(context);
-    final user = Provider.of<UserProvider>(context).user!;
     final pageController = PageController(
       initialPage: 0,
       viewportFraction: 0.85,
@@ -96,7 +94,6 @@ class PilihPaketScreen extends StatelessWidget {
                         context,
                         index,
                         pageController,
-                        user,
                       );
                     },
                   ),
@@ -116,7 +113,6 @@ class PilihPaketScreen extends StatelessWidget {
     BuildContext context,
     int index,
     PageController pageController,
-    User user,
   ) {
     final packageProvider = Provider.of<PackageProvider>(context);
     final packageInfo = packageProvider.packages[index];
@@ -231,7 +227,7 @@ class PilihPaketScreen extends StatelessWidget {
                                   ),
                                   ElevatedButton(
                                     onPressed: () =>
-                                        _selectPackage(context, index, user),
+                                        _selectPackage(context, index),
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 14,
@@ -240,13 +236,13 @@ class PilihPaketScreen extends StatelessWidget {
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.black.withValues(alpha: 0.2),
+                                      shadowColor: Colors.black.withAlpha(51),
                                       elevation: 6,
                                     ).copyWith(
-                                      overlayColor: WidgetStateProperty.all(
-                                        Colors.white.withValues(alpha: 0.1),
+                                      overlayColor: MaterialStateProperty.all(
+                                        Colors.white.withAlpha(25),
                                       ),
-                                      textStyle: WidgetStateProperty.all(
+                                      textStyle: MaterialStateProperty.all(
                                         GoogleFonts.poppins(
                                           fontWeight: FontWeight.w600,
                                           color: Colors.white,
@@ -297,7 +293,7 @@ class PilihPaketScreen extends StatelessWidget {
     );
   }
 
-  void _selectPackage(BuildContext context, int index, User user) {
+  void _selectPackage(BuildContext context, int index) {
     final packageProvider = Provider.of<PackageProvider>(
       context,
       listen: false,
@@ -306,11 +302,7 @@ class PilihPaketScreen extends StatelessWidget {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => PaymentScreen(
-          packageName: packageInfo.name,
-          packagePrice: packageInfo.price,
-          packageFeatures: packageInfo.features,
-        ),
+        builder: (_) => LoginPage(selectedPackage: packageInfo),
       ),
     );
   }

@@ -14,6 +14,7 @@ import '../package/package_status_page.dart';
 import '../profile/edit_profile_page.dart';
 import '../widgets/app_drawer.dart';
 import '../chat/chat_page.dart'; // Import ChatPage
+import 'package:joyin/gen_l10n/app_localizations.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -70,35 +71,29 @@ class _DashboardPageState extends State<DashboardPage> {
       key: scaffoldKey,
       extendBodyBehindAppBar: selectedIndex == 0 || selectedIndex == 5, // Adjusted index for Profile
       backgroundColor: const Color(0xFFF0F2F5),
-      appBar: selectedIndex == 0
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              leading: IconButton(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // Conditionally set the leading icon for the home page
+        leading: selectedIndex == 0
+            ? IconButton(
                 icon: const Icon(Icons.menu, color: Colors.white),
                 onPressed: () => scaffoldKey.currentState?.openDrawer(),
-              ),
-            )
-          : selectedIndex == 5 // Adjusted index for Profile
-          ? AppBar(
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              automaticallyImplyLeading: false,
-            )
-          : AppBar(
-              title: Text(
-                _getPageTitle(selectedIndex),
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
-              elevation: 0,
-              centerTitle: true,
-              automaticallyImplyLeading: false,
-            ),
+                tooltip: 'Buka menu',
+              )
+            : null,
+        // Hide the default back button on other pages
+        automaticallyImplyLeading: false,
+        title: Text(
+          _getPageTitle(context, selectedIndex),
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            // Use white title for home page, black for others
+            color: selectedIndex == 0 || selectedIndex == 5 ? Colors.white : Colors.black,
+          ),
+        ),
+        centerTitle: true,
+      ),
       drawer: user == null
           ? null
           : AppDrawer(
@@ -117,20 +112,21 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  String _getPageTitle(int index) {
+  String _getPageTitle(BuildContext context, int index) {
+    final l10n = AppLocalizations.of(context)!;
     switch (index) {
       case 0:
-        return 'Beranda';
+        return l10n.home;
       case 1:
-        return 'Obrolan'; // New Chat page
+        return l10n.chat;
       case 2:
-        return 'Laporan';
+        return l10n.report;
       case 3:
-        return 'Pengaturan bot';
+        return l10n.botSettings;
       case 4:
-        return 'Paket Saya';
+        return l10n.myPackage;
       case 5:
-        return 'Profil Saya';
+        return l10n.profile;
       default:
         return '';
     }
@@ -151,7 +147,7 @@ class _DashboardPageState extends State<DashboardPage> {
       case 5:
         return _buildProfilePage(context, user);
       default:
-        return Center(child: Text(_getPageTitle(selectedIndex)));
+        return Center(child: Text(_getPageTitle(context, selectedIndex)));
     }
   }
 
@@ -785,31 +781,28 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildLaporanPage() {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: _buildDateRangeSelector(),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: _buildReportSummaryStatistics(),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: _buildMessageVolumeChart(),
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: _buildMessageStatusChart(),
-          ),
-          const SizedBox(height: 20.0), // Add some bottom padding
-        ],
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: _buildDateRangeSelector(),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: _buildReportSummaryStatistics(),
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: _buildMessageStatusChart(),
+            ),
+            const SizedBox(height: 20.0), // Add some bottom padding
+          ],
+        ),
       ),
     );
   }
@@ -1099,19 +1092,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ),
               const Spacer(),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.photo_camera_outlined,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {},
-                ),
-              ),
+              // Removed camera button
             ],
           ),
           const SizedBox(height: 24),

@@ -4,6 +4,8 @@ import 'package:joyin/auth/backend_auth_service.dart';
 import 'package:joyin/core/user_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
+import 'package:joyin/package/package_info.dart';
+import 'package:joyin/screens/payment_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:joyin/auth/local_auth_service.dart';
@@ -20,7 +22,8 @@ import 'package:joyin/providers/user_provider.dart';
 
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+  const RegisterPage({super.key, this.selectedPackage});
+  final PackageInfo? selectedPackage;
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -48,24 +51,31 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _handleRegistrationSuccess(User user) async {
     if (!mounted) return;
+    Provider.of<UserProvider>(context, listen: false).setUser(user);
 
-    final prefs = await SharedPreferences.getInstance();
-    final hasPurchased = prefs.getBool('has_purchased_package') ?? false;
-
-    final updatedUser = user.copyWith(hasPurchasedPackage: hasPurchased);
-    if (!mounted) return;
-    Provider.of<UserProvider>(context, listen: false).setUser(updatedUser);
-
-    if (!mounted) return;
-
-    if (hasPurchased) {
+    if (widget.selectedPackage != null) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
+        MaterialPageRoute(
+          builder: (_) => PaymentScreen(
+            packageName: widget.selectedPackage!.name,
+            packagePrice: widget.selectedPackage!.price,
+            packageFeatures: widget.selectedPackage!.features,
+          ),
+        ),
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final hasPurchased = prefs.getBool('has_purchased_package') ?? false;
+
+      if (hasPurchased) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+        );
+      }
     }
   }
 

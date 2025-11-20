@@ -17,11 +17,13 @@ class PackageStatusPage extends StatelessWidget {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20.0),
-      child: user != null && user.hasPurchasedPackage
-          ? _buildPackageDetails(context, user, packageProvider)
-          : _buildNoPackage(context, user),
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20.0),
+        child: user != null && user.hasPurchasedPackage
+            ? _buildPackageDetails(context, user, packageProvider)
+            : _buildNoPackage(context, user),
+      ),
     );
   }
 
