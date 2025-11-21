@@ -3,9 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// PERHATIKAN: Kita SUDAH TIDAK BUTUH import 'cloud_firestore' di sini!
-// UI jadi lebih ringan dan bersih.
-
 // IMPORT FIREBASE & SERVICE
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:joyin/auth/firebase_auth_service.dart';
@@ -13,14 +10,14 @@ import 'package:joyin/core/user_model.dart' as app_model;
 import 'package:joyin/providers/user_provider.dart';
 
 // WIDGETS & PAGES
-import '../../widgets/buttons.dart';
-import '../../widgets/fields.dart';
+// Catatan: RoundField kita ganti dengan _buildTextField lokal agar style warna baru langsung jalan
+import '../../widgets/buttons.dart'; 
 import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
 import 'forgot_password_page.dart';
 import 'register_page.dart';
 import '../dashboard/dashboard_page.dart';
-import '../core/app_colors.dart';
+import '../core/app_colors.dart'; // Import AppColors yang baru
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -34,8 +31,8 @@ class _LoginPageState extends State<LoginPage> {
   final pass = TextEditingController();
   
   bool isLoading = false;
+  bool _obscureText = true; // Untuk toggle hide/show password
   
-  // Panggil Service Firebase
   final FirebaseAuthService _authService = FirebaseAuthService();
 
   @override
@@ -50,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error, // Menggunakan warna Error dari AppColors
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -66,7 +63,6 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => isLoading = true);
 
     try {
-      // 1. Login ke Auth
       firebase_auth.UserCredential credential = 
           await _authService.signInWithEmailAndPassword(
             email.text.trim(), 
@@ -74,7 +70,6 @@ class _LoginPageState extends State<LoginPage> {
           );
 
       if (credential.user != null) {
-        // 2. Ambil Data Profil (Sekarang kodenya lebih pendek)
         await _fetchUserDataAndNavigate(credential.user!.uid);
       }
 
@@ -101,17 +96,14 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   // --- LOGIKA MAPPING DATA & NAVIGASI ---
-  // (Sekarang fungsi ini tidak menyentuh Firestore langsung)
   Future<void> _fetchUserDataAndNavigate(String uid) async {
     try {
-      // A. Panggil Service untuk minta data (Clean!)
       final userData = await _authService.getUserData(uid);
 
       if (userData == null) {
         throw Exception("Data profil pengguna tidak ditemukan.");
       }
 
-      // B. Masukkan ke dalam User Model Aplikasi
       final currentUser = app_model.User(
         uid: uid,
         email: userData['email'] ?? '',
@@ -121,14 +113,12 @@ class _LoginPageState extends State<LoginPage> {
         photoUrl: userData['photoUrl'], 
       );
 
-      // C. Simpan ke Provider & SharedPrefs
       if (!mounted) return;
       Provider.of<UserProvider>(context, listen: false).setUser(currentUser);
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_purchased_package', currentUser.hasPurchasedPackage);
 
-      // D. Navigasi
       if (!mounted) return;
       
       Navigator.of(context).pushAndRemoveUntil(
@@ -137,9 +127,56 @@ class _LoginPageState extends State<LoginPage> {
       );
 
     } catch (e) {
-      // Lempar error lagi biar ditangkap oleh _signIn
       throw Exception(e.toString().replaceAll('Exception: ', '')); 
     }
+  }
+
+  // --- HELPER WIDGET UNTUK TEXT FIELD (AGAR WARNA KONSISTEN) ---
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    bool isPassword = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword ? _obscureText : false,
+      style: GoogleFonts.poppins(color: AppColors.textPrimary),
+      cursorColor: AppColors.primary, // Kursor warna hijau
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(color: AppColors.textSecondary),
+        filled: true,
+        fillColor: AppColors.background, // Background abu-abu muda
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        
+        // Border saat diam
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        
+        // Border saat diklik (Fokus) -> Warna Primary
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+
+        // Icon mata untuk password
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textSecondary,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscureText = !_obscureText;
+                  });
+                },
+              )
+            : null,
+      ),
+    );
   }
 
   @override
@@ -147,7 +184,7 @@ class _LoginPageState extends State<LoginPage> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface, // Menggunakan warna Surface (Putih)
       body: Stack(
         children: [
           SafeArea(
@@ -164,6 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                           alignment: Alignment.topLeft,
                           child: IconButton(
                             icon: const Icon(Icons.chevron_left),
+                            color: AppColors.textPrimary,
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                         ),
@@ -175,6 +213,7 @@ class _LoginPageState extends State<LoginPage> {
                           style: GoogleFonts.poppins(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary, // Warna Teks Utama
                           ),
                         ),
                         gap(6),
@@ -182,16 +221,27 @@ class _LoginPageState extends State<LoginPage> {
                           'Masukkan email dan password untuk masuk',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.poppins(
-                            color: const Color(0xFF8892A0),
+                            color: AppColors.textSecondary, // Warna Teks Sekunder
                           ),
                         ),
                         gap(26),
 
-                        RoundField(c: email, hint: 'Masukkan Alamat Email'),
-                        gap(12),
-                        RoundField(c: pass, hint: 'Masukkan Password Anda', ob: true),
+                        // INPUT EMAIL
+                        _buildTextField(
+                          controller: email, 
+                          hint: 'Masukkan Alamat Email'
+                        ),
+                        gap(16),
+
+                        // INPUT PASSWORD
+                        _buildTextField(
+                          controller: pass, 
+                          hint: 'Masukkan Password Anda',
+                          isPassword: true,
+                        ),
                         gap(10),
 
+                        // FORGOT PASSWORD
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
@@ -206,7 +256,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: Text(
                               'Lupa Password?',
                               style: GoogleFonts.poppins(
-                                color: const Color(0xFF20BFA2),
+                                color: AppColors.secondary, // Hijau Tosca Gelap
                                 fontWeight: FontWeight.w600,
                                 fontSize: 12.5,
                               ),
@@ -215,25 +265,53 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         gap(8),
 
-                        ElevatedButton(
-                          onPressed: isLoading ? null : _signIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF63D1BE),
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
+                        // --- TOMBOL MASUK DENGAN GRADIENT ---
+                        Container(
+                          width: double.infinity,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24), // Radius sesuai desain lama
+                            gradient: const LinearGradient(
+                              colors: [AppColors.grad1, AppColors.grad3], // Gradient Baru
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: Text(
-                            'Masuk',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _signIn,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: isLoading 
+                              ? const CircularProgressIndicator(color: Colors.white)
+                              : Text(
+                                  'Masuk',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    fontSize: 16
+                                  ),
+                                ),
                           ),
                         ),
                         
                         gap(20),
-                        const DividerWithText(text: 'atau'),
+                        DividerWithText(
+                          text: 'atau',
+                          // Pastikan DividerWithText support parameter warna jika ada, 
+                          // atau biarkan default.
+                        ),
                         gap(14),
 
                         GoogleButton(
@@ -248,7 +326,7 @@ class _LoginPageState extends State<LoginPage> {
                             Text(
                               "Belum punya akun? ",
                               style: GoogleFonts.poppins(
-                                color: const Color(0xFF8B8B8B),
+                                color: AppColors.textSecondary,
                               ),
                             ),
                             GestureDetector(
@@ -262,7 +340,7 @@ class _LoginPageState extends State<LoginPage> {
                               child: Text(
                                 'Daftar',
                                 style: GoogleFonts.poppins(
-                                  color: const Color(0xFF20BFA2),
+                                  color: AppColors.secondary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -277,11 +355,14 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
+          // OVERLAY LOADING (Opsional, karena tombol sudah ada loadingnya)
           if (isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
               child: const Center(
-                child: CircularProgressIndicator(color: Color(0xFF63D1BE)),
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
               ),
             ),
         ],

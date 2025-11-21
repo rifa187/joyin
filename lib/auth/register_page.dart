@@ -9,14 +9,14 @@ import 'package:joyin/auth/firebase_auth_service.dart';
 import 'package:joyin/core/user_model.dart' as app_model; 
 import 'package:joyin/providers/user_provider.dart';
 
-// WIDGETS
-import '../../widgets/buttons.dart';
-import '../../widgets/fields.dart';
-import '../../widgets/misc.dart';
+// WIDGETS & CONFIG
+import '../../widgets/buttons.dart'; // Untuk GoogleButton
+import '../../widgets/misc.dart';    // Untuk DividerWithText
 import '../../widgets/gaps.dart';
 import 'forgot_password_page.dart';
 import '../dashboard/dashboard_page.dart';
 import '../screens/pilih_paket_screen.dart';
+import '../core/app_colors.dart'; // Import AppColors
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -34,6 +34,10 @@ class _RegisterPageState extends State<RegisterPage> {
   
   bool agree = false;
   bool isLoading = false;
+
+  // Visibility Toggles untuk Password
+  bool _obscurePass = true;
+  bool _obscureConfirmPass = true;
 
   // Service Firebase
   final FirebaseAuthService _authService = FirebaseAuthService();
@@ -53,37 +57,34 @@ class _RegisterPageState extends State<RegisterPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppColors.error, // Merah Error
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  // --- FUNGSI INI YANG KITA PERBAIKI ---
+  // --- FUNGSI HANDLER SUKSES ---
   Future<void> _handleRegistrationSuccess(String uid, String userEmail, String userName) async {
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
     final hasPurchased = prefs.getBool('has_purchased_package') ?? false;
 
-    // Membuat Object User Model (SUDAH DISESUAIKAN DENGAN FILE ANDA)
     final newUser = app_model.User(
-      uid: uid,                         // Benar: pakai 'uid'
+      uid: uid,
       email: userEmail,
-      displayName: userName,            // Benar: pakai 'displayName'
-      phoneNumber: phone.text.trim(),   // Benar: pakai 'phoneNumber'
+      displayName: userName,
+      phoneNumber: phone.text.trim(),
       hasPurchasedPackage: hasPurchased,
-      photoUrl: null,                   // Default null
-      dateOfBirth: null,                // Default null
-      packageDurationMonths: null,      // Default null
+      photoUrl: null,
+      dateOfBirth: null,
+      packageDurationMonths: null,
     );
 
-    // Simpan ke Provider
     Provider.of<UserProvider>(context, listen: false).setUser(newUser);
 
     if (!mounted) return;
 
-    // Navigasi
     if (hasPurchased) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DashboardPage()),
@@ -95,8 +96,8 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
+  // --- FUNGSI SIGN UP ---
   Future<void> _signUp() async {
-    // 1. Validasi
     if (!agree) {
       _showErrorSnackBar('Anda harus menyetujui syarat & kebijakan');
       return;
@@ -117,11 +118,9 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 2. Loading ON
     setState(() => isLoading = true);
 
     try {
-      // 3. Panggil Service Firebase
       firebase_auth.User? user = await _authService.signUpWithEmailAndData(
         email: em,
         password: pw,
@@ -130,21 +129,20 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (user != null) {
-        // 4. Sukses
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pendaftaran Berhasil!')),
+          const SnackBar(
+            content: Text('Pendaftaran Berhasil!'),
+            backgroundColor: AppColors.success, // Hijau Sukses
+          ),
         );
         
-        // Update state aplikasi & pindah halaman
         await _handleRegistrationSuccess(user.uid, em, nm);
       }
 
     } catch (e) {
-      // 5. Error
       _showErrorSnackBar(e.toString().replaceAll('Exception: ', ''));
     } finally {
-      // 6. Loading OFF
       if (mounted) {
         setState(() => isLoading = false);
       }
@@ -152,9 +150,52 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _signInWithGoogle() async {
-    // Logika Google Sign In akan dipanggil di sini nanti
-    // await _authService.signInWithGoogle();
     _showErrorSnackBar('Fitur Google Login sedang dalam pengembangan UI.');
+  }
+
+  // --- HELPER WIDGET: INPUT FIELD ---
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    bool isPassword = false,
+    bool? isObscure, // Status hide/show saat ini
+    VoidCallback? onToggleVisibility, // Fungsi saat mata diklik
+    TextInputType inputType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword ? (isObscure ?? true) : false,
+      keyboardType: inputType,
+      style: GoogleFonts.poppins(color: AppColors.textPrimary),
+      cursorColor: AppColors.primary,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(color: AppColors.textSecondary),
+        filled: true,
+        fillColor: AppColors.background,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  (isObscure ?? true) ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textSecondary,
+                ),
+                onPressed: onToggleVisibility,
+              )
+            : null,
+      ),
+    );
   }
 
   @override
@@ -162,7 +203,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: Stack(
         children: [
           SafeArea(
@@ -176,11 +217,13 @@ class _RegisterPageState extends State<RegisterPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // HEADER
                       Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.chevron_left),
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       gap(4),
@@ -191,27 +234,58 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: GoogleFonts.poppins(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       gap(4),
                       Text(
                         'Buat akunmu',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(color: const Color(0xFF8892A0)),
+                        style: GoogleFonts.poppins(color: AppColors.textSecondary),
                       ),
                       gap(22),
 
-                      RoundField(c: name, hint: 'Masukkan Nama Anda'),
+                      // FORM INPUTS
+                      _buildTextField(
+                        controller: name, 
+                        hint: 'Masukkan Nama Anda',
+                        inputType: TextInputType.name
+                      ),
                       gap(12),
-                      RoundField(c: email, hint: 'Masukkan Alamat Email'),
+                      _buildTextField(
+                        controller: email, 
+                        hint: 'Masukkan Alamat Email',
+                        inputType: TextInputType.emailAddress
+                      ),
                       gap(12),
-                      RoundField(c: phone, hint: 'Masukkan Nomor Telepon'),
+                      _buildTextField(
+                        controller: phone, 
+                        hint: 'Masukkan Nomor Telepon',
+                        inputType: TextInputType.phone
+                      ),
                       gap(12),
-                      RoundField(c: pass, hint: 'Masukkan Password', ob: true),
+                      
+                      // Password Field
+                      _buildTextField(
+                        controller: pass, 
+                        hint: 'Masukkan Password', 
+                        isPassword: true,
+                        isObscure: _obscurePass,
+                        onToggleVisibility: () => setState(() => _obscurePass = !_obscurePass),
+                      ),
                       gap(12),
-                      RoundField(c: pass2, hint: 'Konfirmasi Password', ob: true),
+                      
+                      // Confirm Password Field
+                      _buildTextField(
+                        controller: pass2, 
+                        hint: 'Konfirmasi Password', 
+                        isPassword: true,
+                        isObscure: _obscureConfirmPass,
+                        onToggleVisibility: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                      ),
                       gap(12),
 
+                      // Lupa Password (Optional di Register, tapi ada di desain asli)
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -226,7 +300,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           child: Text(
                             'Lupa Password?',
                             style: GoogleFonts.poppins(
-                              color: const Color(0xFF20BFA2),
+                              color: AppColors.secondary,
                               fontWeight: FontWeight.w600,
                               fontSize: 12.5,
                             ),
@@ -235,27 +309,35 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(8),
 
+                      // Syarat & Kebijakan Checkbox
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Checkbox(
-                            value: agree,
-                            onChanged: (v) => setState(() => agree = v ?? false),
-                            activeColor: const Color(0xFF63D1BE),
+                          SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: Checkbox(
+                              value: agree,
+                              onChanged: (v) => setState(() => agree = v ?? false),
+                              activeColor: AppColors.primary,
+                              side: const BorderSide(color: AppColors.border, width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: RichText(
                               text: TextSpan(
                                 style: GoogleFonts.poppins(
-                                  color: const Color(0xFF8B8B8B),
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
                                 ),
                                 children: [
                                   const TextSpan(text: 'Saya mengerti '),
                                   TextSpan(
                                     text: 'syarat & kebijakan',
                                     style: GoogleFonts.poppins(
-                                      color: const Color(0xFF20BFA2),
+                                      color: AppColors.secondary,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -265,22 +347,48 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ],
                       ),
-                      gap(6),
+                      gap(20), // Sedikit lebih lebar jaraknya
 
-                      ElevatedButton(
-                        onPressed: (agree && !isLoading) ? _signUp : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF63D1BE),
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
+                      // BUTTON DAFTAR (Gradient Style)
+                      Container(
+                        width: double.infinity,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          gradient: LinearGradient(
+                            // Gradient hanya aktif jika tombol enable (agree = true)
+                            colors: agree 
+                              ? [AppColors.grad1, AppColors.grad3] 
+                              : [Colors.grey.shade300, Colors.grey.shade400],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          boxShadow: agree ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ] : [],
                         ),
-                        child: Text(
-                          'Daftar',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                        child: ElevatedButton(
+                          onPressed: (agree && !isLoading) ? _signUp : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            disabledBackgroundColor: Colors.transparent, // Agar gradient abu terlihat
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                          ),
+                          child: Text(
+                            'Daftar',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: Colors.white, // Selalu putih
+                            ),
+                          ),
                         ),
                       ),
                       
@@ -294,13 +402,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(20),
 
+                      // LINK LOGIN
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             "Sudah punya akun? ",
                             style: GoogleFonts.poppins(
-                              color: const Color(0xFF8B8B8B),
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           GestureDetector(
@@ -308,13 +417,14 @@ class _RegisterPageState extends State<RegisterPage> {
                             child: Text(
                               'Login',
                               style: GoogleFonts.poppins(
-                                color: const Color(0xFF20BFA2),
+                                color: AppColors.secondary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                         ],
                       ),
+                      gap(20), // Bottom padding extra
                     ],
                   ),
                 ),
@@ -322,12 +432,13 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
 
+          // OVERLAY LOADING
           if (isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFF63D1BE),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
             ),
