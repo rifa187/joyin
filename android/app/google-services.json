@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "153171715536-lr1l270dmf8l6aguvp5fksjfl80gn23v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.joyin",
+            "certificate_hash": "6e41d3e062f30da519e606a77d41a8be496cf044"
+          }
+        },
+        {
           "client_id": "153171715536-lvec9lmoaj9ra912gqvq5kc14vjj6a6v.apps.googleusercontent.com",
           "client_type": 3
         }

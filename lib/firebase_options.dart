@@ -64,8 +64,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '153171715536',
     projectId: 'login-flutter-1a710',
     storageBucket: 'login-flutter-1a710.firebasestorage.app',
-    androidClientId:
-        '153171715536-ml6c9k3bnvt2ut9vruelvk4lgd96u0ht.apps.googleusercontent.com',
+    androidClientId: '153171715536-3dobta1e7o4bq2l9he7a0998kldtqjoa.apps.googleusercontent.com',
+    iosClientId: '153171715536-ju9la2ukgt8qav52139aqkiqb72sl247.apps.googleusercontent.com',
     iosBundleId: 'com.example.joyin',
   );
 
@@ -75,8 +75,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '153171715536',
     projectId: 'login-flutter-1a710',
     storageBucket: 'login-flutter-1a710.firebasestorage.app',
-    androidClientId:
-        '153171715536-ml6c9k3bnvt2ut9vruelvk4lgd96u0ht.apps.googleusercontent.com',
+    androidClientId: '153171715536-3dobta1e7o4bq2l9he7a0998kldtqjoa.apps.googleusercontent.com',
+    iosClientId: '153171715536-ju9la2ukgt8qav52139aqkiqb72sl247.apps.googleusercontent.com',
     iosBundleId: 'com.example.joyin',
   );
 
@@ -89,4 +89,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'login-flutter-1a710.firebasestorage.app',
     measurementId: 'G-8STGV9Q73P',
   );
+
 }

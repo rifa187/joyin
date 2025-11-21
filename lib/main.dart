@@ -1,31 +1,36 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Pastikan install package ini
+
+// --- IMPORT FILE ANDA (Pastikan file ini ada di folder project Anda) ---
 import 'package:joyin/firebase_options.dart';
 import 'package:joyin/onboarding/onboarding_page.dart';
+import 'package:joyin/dashboard/dashboard_page.dart';
+import 'package:joyin/gen_l10n/app_localizations.dart';
+
+// IMPORT PROVIDER ANDA
 import 'package:joyin/providers/locale_provider.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:joyin/gen_l10n/app_localizations.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:joyin/dashboard/dashboard_page.dart';
-
 import 'package:joyin/providers/dashboard_provider.dart';
 
-final navigatorKey = GlobalKey<NavigatorState>(); // Global key
+final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inisialisasi Firebase dengan Error Handling yang rapi
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } on FirebaseException catch (e) {
-    if (e.code != 'duplicate-app') {
-      rethrow;
-    }
+  } catch (e) {
+    // Jika error duplicate app, biarkan saja (aman)
+    debugPrint("Firebase initialization warning: $e");
   }
+
   runApp(const MyApp());
 }
 
@@ -46,10 +51,15 @@ class MyApp extends StatelessWidget {
       child: Consumer<LocaleProvider>(
         builder: (context, provider, child) {
           return MaterialApp(
-            navigatorKey: navigatorKey, // Assign key
+            navigatorKey: navigatorKey,
+            title: 'Joyin App',
             locale: provider.locale,
             debugShowCheckedModeBanner: false,
-            theme: ThemeData(primarySwatch: Colors.blue),
+            theme: ThemeData(
+              primarySwatch: Colors.blue,
+              useMaterial3: true, // Rekomendasi Flutter terbaru
+            ),
+            // Konfigurasi Bahasa
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -60,6 +70,7 @@ class MyApp extends StatelessWidget {
               Locale('en'), // English
               Locale('id'), // Indonesian
             ],
+            // INI BAGIAN KUNCI: Menggunakan StreamBuilder untuk cek Login
             home: const AuthWrapper(),
           );
         },
@@ -68,44 +79,38 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatefulWidget {
+// --- AUTH WRAPPER YANG LEBIH STABIL ---
+class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      final navigator = navigatorKey.currentState;
-      if (navigator == null) return;
-
-      if (user == null) {
-        // User is signed out -> Go to Onboarding
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const OnboardingPage()),
-          (route) => false,
-        );
-      } else {
-        // User is signed in -> Go to Dashboard
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DashboardPage()),
-          (route) => false,
-        );
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Show a loading indicator while the listener decides where to go
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
+    // StreamBuilder akan otomatis memantau perubahan status Login/Logout
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // 1. Saat sedang mengecek ke server (Loading...)
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // 2. Jika ada Error koneksi
+        if (snapshot.hasError) {
+          return const Scaffold(
+            body: Center(child: Text('Terjadi kesalahan koneksi!')),
+          );
+        }
+
+        // 3. Jika User ADA datanya (Sudah Login) -> Masuk Dashboard
+        if (snapshot.hasData) {
+          return const DashboardPage();
+        }
+
+        // 4. Jika User KOSONG (Belum Login) -> Masuk Onboarding
+        return const OnboardingPage();
+      },
     );
   }
 }
