@@ -10,13 +10,13 @@ import 'package:joyin/core/user_model.dart' as app_model;
 import 'package:joyin/providers/user_provider.dart';
 
 // WIDGETS & CONFIG
-import '../../widgets/buttons.dart'; // Untuk GoogleButton
-import '../../widgets/misc.dart';    // Untuk DividerWithText
+import '../../widgets/buttons.dart';
+import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
 import 'forgot_password_page.dart';
 import '../dashboard/dashboard_page.dart';
-import '../screens/pilih_paket_screen.dart';
-import '../core/app_colors.dart'; // Import AppColors
+// import '../screens/pilih_paket_screen.dart'; // Tidak butuh ini lagi di sini
+import '../core/app_colors.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -35,7 +35,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool agree = false;
   bool isLoading = false;
 
-  // Visibility Toggles untuk Password
+  // Visibility Toggles
   bool _obscurePass = true;
   bool _obscureConfirmPass = true;
 
@@ -57,17 +57,18 @@ class _RegisterPageState extends State<RegisterPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: AppColors.error, // Merah Error
+        backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  // --- FUNGSI HANDLER SUKSES ---
+  // --- BAGIAN YANG DIPERBARUI (ALUR NAVIGASI) ---
   Future<void> _handleRegistrationSuccess(String uid, String userEmail, String userName) async {
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
+    // Kita tetap ambil statusnya (untuk keperluan data), tapi tidak dipakai untuk if-else navigasi
     final hasPurchased = prefs.getBool('has_purchased_package') ?? false;
 
     final newUser = app_model.User(
@@ -85,18 +86,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (!mounted) return;
 
-    if (hasPurchased) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
-      );
-    }
+    // PERUBAHAN DI SINI:
+    // Langsung tembak ke DashboardPage, menghapus semua halaman login/register dari back stack
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardPage()),
+      (route) => false, 
+    );
   }
 
-  // --- FUNGSI SIGN UP ---
   Future<void> _signUp() async {
     if (!agree) {
       _showErrorSnackBar('Anda harus menyetujui syarat & kebijakan');
@@ -130,10 +127,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (user != null) {
         if (!mounted) return;
+        // Opsional: Tampilkan snackbar sukses sebentar atau langsung pindah
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Pendaftaran Berhasil!'),
-            backgroundColor: AppColors.success, // Hijau Sukses
+            backgroundColor: AppColors.success,
           ),
         );
         
@@ -153,13 +151,12 @@ class _RegisterPageState extends State<RegisterPage> {
     _showErrorSnackBar('Fitur Google Login sedang dalam pengembangan UI.');
   }
 
-  // --- HELPER WIDGET: INPUT FIELD ---
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
     bool isPassword = false,
-    bool? isObscure, // Status hide/show saat ini
-    VoidCallback? onToggleVisibility, // Fungsi saat mata diklik
+    bool? isObscure,
+    VoidCallback? onToggleVisibility,
     TextInputType inputType = TextInputType.text,
   }) {
     return TextField(
@@ -265,7 +262,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(12),
                       
-                      // Password Field
                       _buildTextField(
                         controller: pass, 
                         hint: 'Masukkan Password', 
@@ -275,7 +271,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(12),
                       
-                      // Confirm Password Field
                       _buildTextField(
                         controller: pass2, 
                         hint: 'Konfirmasi Password', 
@@ -285,7 +280,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(12),
 
-                      // Lupa Password (Optional di Register, tapi ada di desain asli)
+                      // Lupa Password
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -347,16 +342,15 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ],
                       ),
-                      gap(20), // Sedikit lebih lebar jaraknya
+                      gap(20),
 
-                      // BUTTON DAFTAR (Gradient Style)
+                      // BUTTON DAFTAR
                       Container(
                         width: double.infinity,
                         height: 54,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
                           gradient: LinearGradient(
-                            // Gradient hanya aktif jika tombol enable (agree = true)
                             colors: agree 
                               ? [AppColors.grad1, AppColors.grad3] 
                               : [Colors.grey.shade300, Colors.grey.shade400],
@@ -376,7 +370,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
-                            disabledBackgroundColor: Colors.transparent, // Agar gradient abu terlihat
+                            disabledBackgroundColor: Colors.transparent,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
                             ),
@@ -386,7 +380,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
-                              color: Colors.white, // Selalu putih
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -402,7 +396,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(20),
 
-                      // LINK LOGIN
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -424,7 +417,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ],
                       ),
-                      gap(20), // Bottom padding extra
+                      gap(20),
                     ],
                   ),
                 ),
@@ -432,7 +425,6 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
 
-          // OVERLAY LOADING
           if (isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
