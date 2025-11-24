@@ -2,32 +2,33 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Pastikan install package ini
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
-// --- IMPORT FILE ANDA (Pastikan file ini ada di folder project Anda) ---
+// --- IMPORT CONFIG & PAGES ---
 import 'package:joyin/firebase_options.dart';
 import 'package:joyin/onboarding/onboarding_page.dart';
 import 'package:joyin/dashboard/dashboard_page.dart';
 import 'package:joyin/gen_l10n/app_localizations.dart';
 
-// IMPORT PROVIDER ANDA
+// --- IMPORT PROVIDERS ---
 import 'package:joyin/providers/locale_provider.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
 import 'package:joyin/providers/dashboard_provider.dart';
+import 'package:joyin/providers/auth_provider.dart';
+
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inisialisasi Firebase dengan Error Handling yang rapi
+  // Inisialisasi Firebase
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    // Jika error duplicate app, biarkan saja (aman)
     debugPrint("Firebase initialization warning: $e");
   }
 
@@ -40,10 +41,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
+      // --- PENDAFTARAN SEMUA PROVIDER ---
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => PackageProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        
+        // ✅ Provider Otentikasi (Penting untuk Login/Regis)
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+
         ChangeNotifierProvider(
           create: (_) => LocaleProvider(const Locale('id')),
         ),
@@ -53,13 +59,16 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             navigatorKey: navigatorKey,
             title: 'Joyin App',
-            locale: provider.locale,
+            locale: provider.locale, // Mengikuti settingan provider
             debugShowCheckedModeBanner: false,
+            
+            // Konfigurasi Tema
             theme: ThemeData(
               primarySwatch: Colors.blue,
-              useMaterial3: true, // Rekomendasi Flutter terbaru
+              useMaterial3: true,
             ),
-            // Konfigurasi Bahasa
+            
+            // Konfigurasi Bahasa (Localization)
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -70,7 +79,9 @@ class MyApp extends StatelessWidget {
               Locale('en'), // English
               Locale('id'), // Indonesian
             ],
-            // INI BAGIAN KUNCI: Menggunakan StreamBuilder untuk cek Login
+            
+            // ✅ AuthWrapper: Pintu gerbang utama aplikasi
+            // Mengecek apakah user sudah login atau belum
             home: const AuthWrapper(),
           );
         },
@@ -79,36 +90,36 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// --- AUTH WRAPPER YANG LEBIH STABIL ---
+// --- AUTH WRAPPER ---
+// Widget ini bertugas memantau status login Firebase secara real-time.
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // StreamBuilder akan otomatis memantau perubahan status Login/Logout
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // 1. Saat sedang mengecek ke server (Loading...)
+        // 1. Sedang Memuat (Cek koneksi ke server)
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // 2. Jika ada Error koneksi
+        // 2. Terjadi Error
         if (snapshot.hasError) {
           return const Scaffold(
             body: Center(child: Text('Terjadi kesalahan koneksi!')),
           );
         }
 
-        // 3. Jika User ADA datanya (Sudah Login) -> Masuk Dashboard
+        // 3. User Sudah Login (Ada Data) -> Masuk ke Dashboard
         if (snapshot.hasData) {
           return const DashboardPage();
         }
 
-        // 4. Jika User KOSONG (Belum Login) -> Masuk Onboarding
+        // 4. User Belum Login -> Masuk ke Onboarding
         return const OnboardingPage();
       },
     );
