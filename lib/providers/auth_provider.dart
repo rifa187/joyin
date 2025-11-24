@@ -77,6 +77,47 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // --- LOGIC: UBAH PASSWORD ---
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required BuildContext context,
+  }) async {
+    _setLoading(true);
+    try {
+      final user = firebase_auth.FirebaseAuth.instance.currentUser;
+      final cred = firebase_auth.EmailAuthProvider.credential(
+        email: user!.email!,
+        password: currentPassword,
+      );
+
+      // 1. Re-autentikasi (Cek password lama)
+      await user.reauthenticateWithCredential(cred);
+
+      // 2. Update Password
+      await user.updatePassword(newPassword);
+
+      if (context.mounted) {
+        _showSnackBar(context, 'Password berhasil diubah!', isError: false);
+        Navigator.of(context).pop(); // Tutup Dialog setelah sukses
+      }
+      return true;
+    } catch (e) {
+      if (context.mounted) {
+        String message = 'Gagal mengubah password.';
+        if (e.toString().contains('wrong-password')) {
+          message = 'Password lama anda salah.';
+        } else if (e.toString().contains('weak-password')) {
+          message = 'Password baru terlalu lemah.';
+        }
+        _showSnackBar(context, message, isError: true);
+      }
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // --- LOGIC: LOGIN GOOGLE ---
   Future<void> signInWithGoogle(BuildContext context) async {
     _setLoading(true);
