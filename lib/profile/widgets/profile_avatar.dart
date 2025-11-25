@@ -1,3 +1,4 @@
+import 'dart:convert'; 
 import 'package:flutter/material.dart';
 import 'package:joyin/core/app_colors.dart';
 
@@ -16,8 +17,17 @@ class ProfileAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     ImageProvider? imageProvider;
+
     if (photoUrl != null && photoUrl!.isNotEmpty) {
-      imageProvider = NetworkImage(photoUrl!);
+      try {
+        if (photoUrl!.startsWith('http')) {
+          imageProvider = NetworkImage(photoUrl!);
+        } else {
+          imageProvider = MemoryImage(base64Decode(photoUrl!));
+        }
+      } catch (e) {
+        debugPrint("Gagal memuat gambar: $e");
+      }
     }
 
     return SizedBox(
@@ -26,7 +36,6 @@ class ProfileAvatar extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Lingkaran Foto
           Align(
             alignment: Alignment.center,
             child: CircleAvatar(
@@ -35,7 +44,17 @@ class ProfileAvatar extends StatelessWidget {
               child: CircleAvatar(
                 radius: 56,
                 backgroundColor: const Color(0xFFE0E0E0),
+                
                 backgroundImage: imageProvider,
+                
+                // <--- PERBAIKAN DISINI: Cek dulu imageProvider null atau tidak
+                onBackgroundImageError: imageProvider != null 
+                    ? (exception, stackTrace) {
+                        debugPrint("Error menampilkan gambar: $exception");
+                      }
+                    : null, 
+                // ---------------------------------------------------------
+
                 child: isLoading
                     ? const CircularProgressIndicator()
                     : (imageProvider == null
@@ -44,7 +63,7 @@ class ProfileAvatar extends StatelessWidget {
               ),
             ),
           ),
-          // Tombol Edit (Pensil)
+          
           Positioned(
             right: 24,
             bottom: 8,
@@ -54,7 +73,7 @@ class ProfileAvatar extends StatelessWidget {
                 height: 28,
                 width: 28,
                 decoration: BoxDecoration(
-                  color: AppColors.joyin, // Ganti warna hardcoded
+                  color: AppColors.joyin,
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                 ),

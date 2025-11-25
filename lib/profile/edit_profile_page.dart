@@ -72,9 +72,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
-        source: source, 
-        imageQuality: 70, 
-        maxWidth: 800
+        source: source,
+        imageQuality: 20, // ⚠️ TURUNKAN JADI 20-30 (Agar size string kecil)
+        maxWidth: 300,    // ⚠️ KECILKAN RESOLUSI (Cukup untuk avatar bulat)
       );
 
       if (pickedFile != null && mounted) {

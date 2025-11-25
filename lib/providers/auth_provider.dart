@@ -1,8 +1,6 @@
-import 'dart:typed_data'; // Untuk Web
+import 'dart:convert'; // ✅ PENTING: Untuk Base64 (Gratis)
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -84,14 +82,11 @@ class AuthProvider with ChangeNotifier {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("User tidak ditemukan");
 
-      // Re-autentikasi
       final cred = firebase_auth.EmailAuthProvider.credential(
         email: user.email!,
         password: currentPassword,
       );
       await user.reauthenticateWithCredential(cred);
-
-      // Update Password
       await user.updatePassword(newPassword);
 
       if (context.mounted) {
@@ -102,11 +97,8 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       if (context.mounted) {
         String message = 'Gagal mengubah password.';
-        if (e.toString().contains('wrong-password')) {
-          message = 'Password lama anda salah.';
-        } else if (e.toString().contains('weak-password')) {
-          message = 'Password baru terlalu lemah.';
-        }
+        if (e.toString().contains('wrong-password')) message = 'Password lama anda salah.';
+        else if (e.toString().contains('weak-password')) message = 'Password baru terlalu lemah.';
         _showSnackBar(context, message, isError: true);
       }
       return false;
@@ -115,35 +107,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // --- 4. UPLOAD FOTO PROFIL ---
+  // --- 4. UPLOAD FOTO PROFIL (METODE BASE64 - GRATIS) ---
   Future<void> uploadProfilePicture(BuildContext context, XFile imageFile) async {
     _setLoading(true);
     try {
       final user = firebase_auth.FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // A. Upload ke Storage
-      final storageRef = FirebaseStorage.instance.ref().child('user_images/${user.uid}.jpg');
-      
-      if (kIsWeb) {
-        Uint8List imageBytes = await imageFile.readAsBytes();
-        await storageRef.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
-      } else {
-        // Menggunakan readAsBytes agar aman lintas platform
-        Uint8List imageBytes = await imageFile.readAsBytes();
-        await storageRef.putData(imageBytes);
-      }
+      // A. Ubah Gambar jadi Bytes -> Base64 String
+      final bytes = await imageFile.readAsBytes();
+      final String base64Image = base64Encode(bytes);
 
-      // B. Ambil URL & Simpan ke Firestore
-      final String downloadUrl = await storageRef.getDownloadURL();
+      // B. Simpan String Base64 ke Firestore
+      // (Tanpa perlu Firebase Storage yang berbayar)
       await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'photoUrl': downloadUrl,
+        'photoUrl': base64Image,
       });
 
       // C. Update Provider Lokal
       if (context.mounted) {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final updatedUser = userProvider.user!.copyWith(photoUrl: downloadUrl);
+        final updatedUser = userProvider.user!.copyWith(photoUrl: base64Image);
         userProvider.setUser(updatedUser);
         
         _showSnackBar(context, 'Foto profil berhasil diperbarui!', isError: false);
@@ -166,14 +150,12 @@ class AuthProvider with ChangeNotifier {
     try {
       final uid = firebase_auth.FirebaseAuth.instance.currentUser!.uid;
 
-      // A. Update Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).update({
         'name': name,
         'phone': phone,
         'dateOfBirth': dob,
       });
 
-      // B. Update Provider Lokal
       if (context.mounted) {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final updatedUser = userProvider.user!.copyWith(
