@@ -166,7 +166,7 @@ class _DashboardPageState extends State<DashboardPage> {
   ) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final updatedUser = await Navigator.of(context).push<User>(
-      MaterialPageRoute(builder: (context) => EditProfilePage(user: user)),
+      MaterialPageRoute(builder: (context) => EditProfilePage()),
     );
     if (!mounted || updatedUser == null) {
       return;
