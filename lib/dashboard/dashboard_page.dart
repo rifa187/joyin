@@ -9,11 +9,13 @@ import '../core/app_colors.dart';
 import '../widgets/app_drawer.dart';
 
 // PAGES IMPORT
-import 'home_content.dart';          // ✅ File baru tadi
+import 'home_content.dart';
 import '../chat/chat_page.dart';
 import '../package/package_status_page.dart';
 import '../profile/profile_page.dart';
 import '../profile/edit_profile_page.dart';
+import '../report/report_page.dart';
+import '../bot/bot_settings_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -25,12 +27,13 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // Daftar Halaman
+ // ✅ DAFTAR HALAMAN (VERSI FINAL)
+  // Semua halaman sekarang sudah terhubung ke file aslinya
   final List<Widget> _pages = [
-    const HomeContent(),        // Index 0: Beranda (Code dipisah)
+    const HomeContent(),        // Index 0: Beranda
     const ChatPage(),           // Index 1: Obrolan
-    const Center(child: Text("Halaman Laporan")),       // Index 2: Laporan (Placeholder)
-    const Center(child: Text("Halaman Pengaturan Bot")), // Index 3: Bot (Placeholder)
+    const ReportPage(),         // Index 2: Laporan
+    const BotSettingsPage(),    // Index 3: Pengaturan Bot (UPDATED ✅)
     const PackageStatusPage(),  // Index 4: Paket Saya
     const ProfilePage(),        // Index 5: Profil Saya
   ];
@@ -38,7 +41,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // Judul Halaman di AppBar
   String _getPageTitle(int index) {
     switch (index) {
-      case 0: return 'Beranda'; // Biasanya tidak muncul karena transparan
+      case 0: return 'Beranda';
       case 1: return 'Obrolan';
       case 2: return 'Laporan';
       case 3: return 'Pengaturan Bot';
