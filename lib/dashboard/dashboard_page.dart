@@ -27,13 +27,12 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
- // ✅ DAFTAR HALAMAN (VERSI FINAL)
-  // Semua halaman sekarang sudah terhubung ke file aslinya
+  // ✅ DAFTAR HALAMAN (VERSI FINAL)
   final List<Widget> _pages = [
     const HomeContent(),        // Index 0: Beranda
     const ChatPage(),           // Index 1: Obrolan
     const ReportPage(),         // Index 2: Laporan
-    const BotSettingsPage(),    // Index 3: Pengaturan Bot (UPDATED ✅)
+    const BotSettingsPage(),    // Index 3: Pengaturan Bot
     const PackageStatusPage(),  // Index 4: Paket Saya
     const ProfilePage(),        // Index 5: Profil Saya
   ];
@@ -67,8 +66,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return Scaffold(
       key: scaffoldKey,
-      // Hanya Beranda & Profil yang body-nya sampai atas (di belakang AppBar)
-      extendBodyBehindAppBar: selectedIndex == 0 || selectedIndex == 5,
+      
+      // ✅ UPDATE 1: Tambahkan selectedIndex == 4 agar halaman Paket 
+      // bisa naik ke atas (full screen) seperti Beranda & Profil
+      extendBodyBehindAppBar: selectedIndex == 0 || selectedIndex == 4 || selectedIndex == 5,
+      
       backgroundColor: const Color(0xFFF0F2F5),
       
       appBar: _buildAppBar(selectedIndex),
@@ -104,6 +106,11 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       );
     } 
+    // ✅ UPDATE 2: Hapus AppBar Dashboard khusus untuk tab Paket (Index 4)
+    // karena PackageStatusPage sudah punya header sendiri.
+    else if (index == 4) {
+      return null; 
+    }
     // Profil: AppBar Transparan + Tanpa Icon Back
     else if (index == 5) {
       return AppBar(
@@ -144,7 +151,8 @@ class _DashboardPageState extends State<DashboardPage> {
       showUnselectedLabels: true,
       selectedFontSize: 12,
       unselectedFontSize: 12,
-      selectedItemColor: AppColors.joyin, // Pastikan ada di AppColors
+      // Pastikan AppColors.joyin sudah didefinisikan, atau ganti dengan Color(0xFF4DB6AC)
+      selectedItemColor: AppColors.joyin, 
       unselectedItemColor: Colors.grey[600],
     );
   }
@@ -156,6 +164,7 @@ class _DashboardPageState extends State<DashboardPage> {
         duration: const Duration(milliseconds: 200),
         width: 48, height: 32,
         decoration: BoxDecoration(
+          // Pastikan AppColors.joyin sudah didefinisikan
           color: selectedIndex == index ? AppColors.joyin : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
