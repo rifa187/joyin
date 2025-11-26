@@ -14,10 +14,9 @@ import '../auth/login_page.dart'; // Untuk navigasi setelah logout
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  // Fungsi Logout (Tambahan)
+  // Fungsi Logout (Tambahan - Bisa diaktifkan nanti)
   void _handleLogout(BuildContext context) {
-    // Disini bisa panggil authProvider.logout() jika sudah ada
-    // Untuk sementara kita pakai navigasi manual ke Login
+    // Contoh navigasi ke login page
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
       (route) => false,
@@ -51,7 +50,7 @@ class ProfilePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Judul Halaman
+                      // Judul Halaman & Logout
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -63,7 +62,7 @@ class ProfilePage extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          // Ikon Logout (Opsional)
+                          // Ikon Logout
                           IconButton(
                             onPressed: () => _handleLogout(context),
                             icon: const Icon(Icons.logout, color: Colors.white),
@@ -77,11 +76,12 @@ class ProfilePage extends StatelessWidget {
                       Row(
                         children: [
                           // FOTO PROFIL (Base64 Ready)
+                          // Menggunakan Widget ProfileAvatar yang sudah kita buat
                           ProfileAvatar(
                             photoUrl: user?.photoUrl,
-                            isLoading: false, // Tidak ada loading di sini
+                            isLoading: false, // Tidak ada loading upload di sini
                             onEditTap: () {
-                              // Shortcut ke Edit Profil
+                              // Shortcut ke Edit Profil saat foto diklik
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (_) => const EditProfilePage()),
