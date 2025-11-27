@@ -12,6 +12,7 @@ import 'dart:math' as math;
 import '../core/user_model.dart';
 import '../package/package_status_page.dart';
 import '../profile/edit_profile_page.dart';
+import '../profile/about_page.dart';
 import '../widgets/app_drawer.dart';
 import '../chat/chat_page.dart'; // Import ChatPage
 
@@ -1106,10 +1107,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 child: IconButton(
                   icon: const Icon(
-                    Icons.photo_camera_outlined,
+                    Icons.settings_outlined,
                     color: Colors.white,
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const SettingsPage()),
+                    );
+                  },
                 ),
               ),
             ],
@@ -1209,7 +1216,12 @@ class _DashboardPageState extends State<DashboardPage> {
         _buildProfileMenuItem(
           icon: Icons.info_outline,
           text: 'Tentang',
-          onTap: () {},
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AboutPage()),
+            );
+          },
         ),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 10.0),
