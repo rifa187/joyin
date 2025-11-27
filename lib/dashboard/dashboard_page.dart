@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart'; // ✅ Tambahkan import ini untuk Logout
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -58,6 +59,15 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  // ✅ FUNGSI LOGOUT (BARU)
+  void _handleLogout() async {
+    // 1. Logout dari Firebase
+    await FirebaseAuth.instance.signOut();
+    
+    // 2. Karena main.dart pakai AuthWrapper, aplikasi akan otomatis mendeteksi
+    // perubahan status auth dan pindah sendiri ke OnboardingPage.
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboardProvider = context.watch<DashboardProvider>();
@@ -104,10 +114,17 @@ class _DashboardPageState extends State<DashboardPage> {
           icon: const Icon(Icons.menu, color: Colors.white),
           onPressed: () => scaffoldKey.currentState?.openDrawer(),
         ),
+        // ✅ TAMBAHKAN TOMBOL LOGOUT DI SINI (POJOK KANAN ATAS)
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: "Keluar",
+            onPressed: _handleLogout,
+          ),
+        ],
       );
     } 
     // ✅ UPDATE 2: Hapus AppBar Dashboard khusus untuk tab Paket (Index 4)
-    // karena PackageStatusPage sudah punya header sendiri.
     else if (index == 4) {
       return null; 
     }
@@ -117,6 +134,13 @@ class _DashboardPageState extends State<DashboardPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
+        actions: [
+          // Logout juga bisa ditambahkan di Profil jika mau
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _handleLogout,
+          ),
+        ],
       );
     } 
     // Halaman Lain: AppBar Putih Biasa
@@ -130,6 +154,13 @@ class _DashboardPageState extends State<DashboardPage> {
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
+        // Logout versi icon hitam untuk halaman berlatar putih
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.black),
+            onPressed: _handleLogout,
+          ),
+        ],
       );
     }
   }

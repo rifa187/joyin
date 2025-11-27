@@ -14,14 +14,6 @@
       },
       "oauth_client": [
         {
-          "client_id": "153171715536-3dobta1e7o4bq2l9he7a0998kldtqjoa.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.joyin",
-            "certificate_hash": "75b8ebfae82c8a2424ab406a5168d3bc4ce374d6"
-          }
-        },
-        {
           "client_id": "153171715536-lr1l270dmf8l6aguvp5fksjfl80gn23v.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

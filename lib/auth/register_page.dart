@@ -9,11 +9,13 @@ import '../providers/auth_provider.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
-import 'forgot_password_page.dart';
 import '../core/app_colors.dart';
+
+// TIDAK PERLU IMPORT REGISTER_OTP_PAGE LAGI
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
+
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -42,7 +44,35 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  // Helper TextField (Sama seperti Login Page)
+  // === LOGIKA BARU: REGISTER LANGSUNG (TANPA OTP) ===
+  void _handleRegister() {
+    // 1. Validasi Form
+    if (name.text.isEmpty || email.text.isEmpty || phone.text.isEmpty || pass.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mohon lengkapi semua data'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+    if (pass.text != pass2.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password tidak sama'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    // 2. Panggil Fungsi Register Email di AuthProvider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    authProvider.registerWithEmail(
+      name: name.text.trim(),
+      email: email.text.trim(),
+      phone: phone.text.trim(), // Simpan nomor apa adanya sebagai data kontak
+      password: pass.text,
+      context: context,
+    );
+  }
+
+  // Helper TextField (UI Tetap Sama)
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -86,8 +116,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Panggil AuthProvider (Si Otak)
+    // Dengarkan perubahan loading dari Provider
     final authProvider = Provider.of<AuthProvider>(context);
+    final isLoading = authProvider.isLoading;
+    
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
@@ -127,7 +159,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       ),
                       gap(4),
                       Text(
-                        'Buat akunmu',
+                        'Buat akunmu (Gratis)',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(color: AppColors.textSecondary),
                       ),
@@ -154,17 +186,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         onToggleVisibility: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
                       ),
                       gap(12),
-
-                      // Lupa Password
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordPage())),
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                          child: Text('Lupa Password?', style: GoogleFonts.poppins(color: AppColors.secondary, fontWeight: FontWeight.w600, fontSize: 12.5)),
-                        ),
-                      ),
-                      gap(8),
 
                       // Syarat & Kebijakan Checkbox
                       Row(
@@ -217,28 +238,8 @@ class _RegisterPageState extends State<RegisterPage> {
                           ] : [],
                         ),
                         child: ElevatedButton(
-                          // 2. PANGGIL AUTH PROVIDER DISINI
-                          onPressed: (agree && !authProvider.isLoading) 
-                            ? () {
-                                // Validasi UI Sederhana
-                                if (name.text.isEmpty || email.text.isEmpty || phone.text.isEmpty || pass.text.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon lengkapi semua data'), backgroundColor: AppColors.error));
-                                  return;
-                                }
-                                if (pass.text != pass2.text) {
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password tidak sama'), backgroundColor: AppColors.error));
-                                  return;
-                                }
-
-                                // Panggil Fungsi SignUp di Provider
-                                authProvider.signUp(
-                                  email: email.text.trim(),
-                                  password: pass.text,
-                                  name: name.text.trim(),
-                                  phone: phone.text.trim(),
-                                  context: context,
-                                );
-                              } 
+                          onPressed: (agree && !isLoading) 
+                            ? _handleRegister 
                             : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
@@ -246,9 +247,9 @@ class _RegisterPageState extends State<RegisterPage> {
                             disabledBackgroundColor: Colors.transparent,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                           ),
-                          child: authProvider.isLoading
+                          child: isLoading
                               ? const CircularProgressIndicator(color: Colors.white)
-                              : Text('Daftar', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
+                              : Text('Daftar Sekarang', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white)),
                         ),
                       ),
                       
@@ -280,8 +281,8 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
 
-          // Overlay Loading (Optional)
-          if (authProvider.isLoading)
+          // Overlay Loading Global
+          if (isLoading)
             Container(
               color: Colors.black.withOpacity(0.1),
               child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),

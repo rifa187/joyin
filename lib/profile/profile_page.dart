@@ -5,27 +5,48 @@ import 'package:provider/provider.dart';
 // IMPORT FILE KAMU
 import '../core/app_colors.dart';
 import '../providers/user_provider.dart';
-import '../providers/auth_provider.dart'; // Untuk Logout (opsional)
-import 'widgets/profile_avatar.dart'; // Widget Avatar Canggih
+import '../providers/auth_provider.dart'; 
+import 'widgets/profile_avatar.dart'; 
 import 'edit_profile_page.dart';
 import 'settings_page.dart';
-import '../auth/login_page.dart'; // Untuk navigasi setelah logout
+import '../auth/login_page.dart'; 
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  // Fungsi Logout (Tambahan - Bisa diaktifkan nanti)
+  // Fungsi Logout
   void _handleLogout(BuildContext context) {
-    // Contoh navigasi ke login page
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
+    // Tampilkan Dialog Konfirmasi Dulu (UX yang baik)
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Keluar Akun?", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text("Anda harus login kembali untuk mengakses akun ini.", style: GoogleFonts.poppins()),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Batal", style: GoogleFonts.poppins(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Tutup dialog
+              
+              // Lakukan Navigasi ke Login Page dan Hapus Route Sebelumnya
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (route) => false,
+              );
+            },
+            child: Text("Keluar", style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Gunakan Consumer agar halaman selalu update saat data berubah
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
         final user = userProvider.user;
@@ -50,38 +71,26 @@ class ProfilePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Judul Halaman & Logout
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Akun Saya',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Ikon Logout
-                          IconButton(
-                            onPressed: () => _handleLogout(context),
-                            icon: const Icon(Icons.logout, color: Colors.white),
-                            tooltip: 'Keluar',
-                          ),
-                        ],
+                      // Judul Halaman (Tombol Logout DIHAPUS dari sini agar tidak dobel)
+                      Text(
+                        'Akun Saya',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      
                       const SizedBox(height: 24),
                       
                       // Info User (Foto & Nama)
                       Row(
                         children: [
-                          // FOTO PROFIL (Base64 Ready)
-                          // Menggunakan Widget ProfileAvatar yang sudah kita buat
+                          // FOTO PROFIL
                           ProfileAvatar(
                             photoUrl: user?.photoUrl,
-                            isLoading: false, // Tidak ada loading upload di sini
+                            isLoading: false,
                             onEditTap: () {
-                              // Shortcut ke Edit Profil saat foto diklik
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (_) => const EditProfilePage()),
@@ -150,18 +159,24 @@ class ProfilePage extends StatelessWidget {
                           context, 
                           icon: Icons.help_outline, 
                           text: 'Bantuan',
-                          onTap: () {
-                            // Navigasi ke Bantuan (jika ada)
-                          },
+                          onTap: () {},
                         ),
                         const Divider(height: 1),
                         _buildMenuItem(
                           context, 
                           icon: Icons.info_outline, 
                           text: 'Tentang Aplikasi',
-                          onTap: () {
-                            // Navigasi ke Tentang (jika ada)
-                          },
+                          onTap: () {},
+                        ),
+                        
+                        // --- TOMBOL KELUAR (Dipindah ke sini) ---
+                        const Divider(height: 1),
+                        _buildMenuItem(
+                          context, 
+                          icon: Icons.logout, 
+                          text: 'Keluar',
+                          isDestructive: true, // Warna Merah
+                          onTap: () => _handleLogout(context),
                         ),
                       ],
                     ),
@@ -185,23 +200,33 @@ class ProfilePage extends StatelessWidget {
   }
 
   // Helper Widget untuk Menu Item
-  Widget _buildMenuItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap}) {
+  Widget _buildMenuItem(BuildContext context, {
+    required IconData icon, 
+    required String text, 
+    required VoidCallback onTap,
+    bool isDestructive = false, // Opsi untuk warna merah (Logout)
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.joyin.withOpacity(0.1),
+          // Jika Destructive (Logout) warnanya merah muda, jika tidak hijau muda
+          color: isDestructive 
+              ? Colors.red.withOpacity(0.1) 
+              : AppColors.joyin.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: AppColors.joyin, size: 22),
+        // Icon Merah jika logout
+        child: Icon(icon, color: isDestructive ? Colors.red : AppColors.joyin, size: 22),
       ),
       title: Text(
         text, 
         style: GoogleFonts.poppins(
           fontWeight: FontWeight.w500,
           fontSize: 15,
-          color: Colors.black87
+          // Teks Merah jika logout
+          color: isDestructive ? Colors.red : Colors.black87
         )
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),

@@ -3,9 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/app_colors.dart';
-import '../../widgets/gaps.dart';
-import '../auth/login_page.dart';
+// Pastikan path import ini sesuai dengan struktur project kamu
+// Jika merah, sesuaikan foldernya.
+import 'package:joyin/core/app_colors.dart'; 
+import 'package:joyin/widgets/gaps.dart'; // Asumsi file ini ada di lib/widgets/
+import 'package:joyin/auth/login_page.dart'; // Arahkan ke Login Page
 
 enum _SlideLayout { hero, single, card }
 
@@ -51,11 +53,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
           'Dengan chatbot Joyin, kamu nggak perlu nunggu lama lagi. Semua jawaban langsung tersedia dalam hitungan detik!',
       hero: _HeroConfig(
         leftAsset: 'assets/images/maskot_kiri.png',
-        rightAsset: 'assets/images/maskot_kanan-crop.png',
+        rightAsset: 'assets/images/maskot_kanan-crop.png', // Pastikan aset ini ada
         leftWidth: 360,
-        rightWidth: 350, // Adjusted for cropped image
+        rightWidth: 350, 
         leftAngleDeg: 50,
-        rightAngleDeg: 0, // Horizontal orientation
+        rightAngleDeg: 0, 
         leftOffset: Offset(0, 0),
         rightOffset: Offset(0, 0),
       ),
@@ -65,10 +67,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
       description:
           'Chatbot Joyin selalu siap sedia kapanpun kamu butuh. Tidak perlu menunggu lama, bantuan selalu ada disaat kamu butuh.',
       single: _SingleConfig(
-        asset: 'assets/images/Joy_siaga.png',
-        width: 250, // Adjusted width to fit layout
+        asset: 'assets/images/Joy_siaga.png', // Pastikan aset ini ada
+        width: 250,
         angleDeg: 0,
-        offset: Offset(0, -20), // Adjusted offset
+        offset: Offset(0, -20),
       ),
     ),
     _OnboardingSlide.single(
@@ -76,7 +78,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       description:
           'Fokus pada bisnismu, biarkan Joyin menghemat waktumu dengan respon cepat dan cerdas.',
       single: _SingleConfig(
-        asset: 'assets/images/Joy Hemat Waktu.png',
+        asset: 'assets/images/Joy Hemat Waktu.png', // Pastikan aset ini ada
         width: 250,
         angleDeg: 0,
         offset: Offset(0, -20),
@@ -92,9 +94,11 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   void _goNext() {
     if (_index >= _slides.length - 1) {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const LoginPage()));
+      // === PERBAIKAN DI SINI ===
+      // Gunakan pushReplacement agar tidak bisa back ke onboarding
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
     } else {
       _controller.nextPage(
         duration: const Duration(milliseconds: 320),
@@ -130,7 +134,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 padding: const EdgeInsets.fromLTRB(28, 10, 28, 10),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Image.asset('assets/images/logo_joyin.png', width: 74),
+                  // Pastikan logo ini ada
+                  child: Image.asset('assets/images/logo_joyin.png', width: 74, 
+                    errorBuilder: (ctx, err, _) => const Icon(Icons.eco, color: Colors.white, size: 40), // Fallback icon
+                  ),
                 ),
               ),
               Expanded(
@@ -147,14 +154,16 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 child: Column(
                   children: [
                     _Indicators(length: _slides.length, current: _index),
-                    gap(22),
+                    // Menggunakan SizedBox(height: 22) sebagai pengganti gap(22) jika gap belum diimport
+                    const SizedBox(height: 22), 
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _goNext,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: AppColors.joyin,
+                          // Gunakan warna hijau default jika AppColors.joyin error
+                          foregroundColor: const Color(0xFF4DB6AC), 
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -219,10 +228,7 @@ class _HeroSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Validasi bahwa konfigurasi hero tersedia
-    if (slide.hero == null) {
-      return const SizedBox.shrink(); // atau widget fallback
-    }
+    if (slide.hero == null) return const SizedBox.shrink();
 
     final cfg = slide.hero!;
     return Column(
@@ -233,9 +239,8 @@ class _HeroSlide extends StatelessWidget {
             builder: (context) {
               final media = MediaQuery.of(context);
               final contentWidth = media.size.width;
-              if (contentWidth <= 0) {
-                return const SizedBox.shrink();
-              }
+              if (contentWidth <= 0) return const SizedBox.shrink();
+              
               final baseMascot = (contentWidth * 0.86).clamp(260.0, 380.0);
               final leftWidth = math.min(cfg.leftWidth, baseMascot * 0.9);
               final rightWidth = math.min(cfg.rightWidth, baseMascot * 1.1);
@@ -243,7 +248,7 @@ class _HeroSlide extends StatelessWidget {
               return Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  // Maskot kiri (mirror) - mentok ke kiri seperti di landing page
+                  // Maskot kiri (mirror)
                   Positioned(
                     left: -100,
                     top: 20,
@@ -258,21 +263,26 @@ class _HeroSlide extends StatelessWidget {
                           child: Image.asset(
                             cfg.leftAsset,
                             fit: BoxFit.contain,
+                            errorBuilder: (ctx, err, _) => const SizedBox.shrink(),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  // Maskot kanan - positioned on the right side horizontally with increased size
+                  // Maskot kanan
                   Positioned(
-                    right: -90, // Adjusted position for larger size
-                    top: 20, // Adjusted vertical position for better alignment
+                    right: -90,
+                    top: 20,
                     child: Transform.rotate(
-                      angle: 0, // Horizontal orientation (no rotation)
+                      angle: 0,
                       child: SizedBox(
-                        width: rightWidth * 0.95, // Slightly larger width
-                        height: rightWidth * 0.95, // Slightly larger height
-                        child: Image.asset(cfg.rightAsset, fit: BoxFit.contain),
+                        width: rightWidth * 0.95,
+                        height: rightWidth * 0.95,
+                        child: Image.asset(
+                          cfg.rightAsset, 
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx, err, _) => const SizedBox.shrink(),
+                        ),
                       ),
                     ),
                   ),
@@ -281,7 +291,7 @@ class _HeroSlide extends StatelessWidget {
             },
           ),
         ),
-        gap(24),
+        const SizedBox(height: 24),
         _SlideTexts(slide: slide),
       ],
     );
@@ -294,10 +304,7 @@ class _SingleSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Validasi bahwa konfigurasi single tersedia
-    if (slide.single == null) {
-      return const SizedBox.shrink(); // atau widget fallback
-    }
+    if (slide.single == null) return const SizedBox.shrink();
 
     final cfg = slide.single!;
     return Column(
@@ -314,12 +321,13 @@ class _SingleSlide extends StatelessWidget {
                   cfg.asset,
                   width: cfg.width,
                   fit: BoxFit.contain,
+                  errorBuilder: (ctx, err, _) => const Icon(Icons.image_not_supported, size: 100, color: Colors.white54),
                 ),
               ),
             ),
           ),
         ),
-        gap(12),
+        const SizedBox(height: 12),
         _SlideTexts(slide: slide),
       ],
     );
@@ -332,13 +340,9 @@ class _CardSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Validasi bahwa konfigurasi card tersedia
-    if (slide.card == null) {
-      return const SizedBox.shrink(); // atau widget fallback
-    }
+    if (slide.card == null) return const SizedBox.shrink();
 
     final cfg = slide.card!;
-
     final imageSize = math.min(cfg.imageWidth, cfg.circleDiameter);
 
     return Column(
@@ -354,11 +358,12 @@ class _CardSlide extends StatelessWidget {
                 width: imageSize,
                 height: imageSize,
                 fit: BoxFit.contain,
+                errorBuilder: (ctx, err, _) => const Icon(Icons.image, size: 100, color: Colors.white54),
               ),
             ),
           ),
         ),
-        gap(24),
+        const SizedBox(height: 24),
         _SlideTexts(slide: slide),
       ],
     );
@@ -385,7 +390,7 @@ class _SlideTexts extends StatelessWidget {
               height: 1.3,
             ),
           ),
-          gap(12),
+          const SizedBox(height: 12),
           Text(
             slide.description,
             textAlign: TextAlign.center,
@@ -430,6 +435,8 @@ class _Indicators extends StatelessWidget {
   }
 }
 
+// --- CONFIG CLASSES ---
+
 class _OnboardingSlide {
   final _SlideLayout layout;
   final String title;
@@ -458,13 +465,13 @@ class _OnboardingSlide {
     String cta = 'Selanjutnya',
     double topSpacing = 28,
   }) : this._(
-         layout: _SlideLayout.hero,
-         title: title,
-         description: description,
-         cta: cta,
-         topSpacing: topSpacing,
-         hero: hero,
-       );
+          layout: _SlideLayout.hero,
+          title: title,
+          description: description,
+          cta: cta,
+          topSpacing: topSpacing,
+          hero: hero,
+        );
 
   const _OnboardingSlide.single({
     required String title,
@@ -473,13 +480,13 @@ class _OnboardingSlide {
     String cta = 'Selanjutnya',
     double topSpacing = 10,
   }) : this._(
-         layout: _SlideLayout.single,
-         title: title,
-         description: description,
-         cta: cta,
-         topSpacing: topSpacing,
-         single: single,
-       );
+          layout: _SlideLayout.single,
+          title: title,
+          description: description,
+          cta: cta,
+          topSpacing: topSpacing,
+          single: single,
+        );
 }
 
 class _HeroConfig {
@@ -489,7 +496,6 @@ class _HeroConfig {
   final double rightWidth;
   final double leftAngleDeg;
   final double rightAngleDeg;
-  // Fine-tuning offsets applied after bottom-anchored mascot placement.
   final Offset leftOffset;
   final Offset rightOffset;
   const _HeroConfig({

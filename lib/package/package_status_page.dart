@@ -137,12 +137,12 @@ class PackageStatusPage extends StatelessWidget {
     User user,
     PackageProvider packageProvider,
   ) {
-    // FIX: Cek jika kosong, return widget kosong agar tidak error
+    // FIX PENTING: Cek jika list kosong, return widget kosong biar gak error
     if (packageProvider.packages.isEmpty) {
       return const SizedBox(); 
     }
 
-    // Ambil paket user atau fallback ke paket pertama
+    // Ambil paket user atau fallback ke paket pertama (aman karena sudah dicek tidak kosong)
     final selectedPackageInfo = packageProvider.packages.firstWhere(
       (pkg) => pkg.name == packageProvider.currentUserPackage,
       orElse: () => packageProvider.packages.first,

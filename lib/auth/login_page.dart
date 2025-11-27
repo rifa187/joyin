@@ -2,16 +2,21 @@
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-// IMPORT PROVIDER BARU
-import '../providers/auth_provider.dart';
+// IMPORT PROVIDER
+import 'package:joyin/providers/auth_provider.dart';
 
-// WIDGETS & PAGES
-import '../../widgets/buttons.dart'; 
-import '../../widgets/misc.dart';
-import '../../widgets/gaps.dart';
-import 'forgot_password_page.dart';
-import 'register_page.dart';
-import '../core/app_colors.dart';
+// IMPORT HALAMAN LAIN
+// Pastikan path import ini sesuai dengan struktur folder Anda
+import 'package:joyin/auth/forgot_password_phone_page.dart';
+import 'package:joyin/auth/register_page.dart';
+import 'package:joyin/auth/phone_login_page.dart'; // Import halaman Login No. HP
+
+// IMPORT WIDGETS & CONFIG
+// Sesuaikan path jika berbeda, misal: 'package:joyin/widgets/...'
+import 'package:joyin/core/app_colors.dart';
+import 'package:joyin/widgets/gaps.dart';
+import 'package:joyin/widgets/buttons.dart'; 
+import 'package:joyin/widgets/misc.dart'; // Untuk DividerWithText
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -32,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // Helper Widget TextField (TETAP SAMA SEPERTI KODE KAMU)
+  // Helper Widget: TextField Custom
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -72,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Panggil AuthProvider (Si Otak)
+    // Mengambil instance AuthProvider
     final authProvider = Provider.of<AuthProvider>(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -90,6 +95,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Tombol Back (Pojok Kiri Atas)
                         Align(
                           alignment: Alignment.topLeft,
                           child: IconButton(
@@ -100,6 +106,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         gap(20),
 
+                        // Judul Halaman
                         Text(
                           'LOGIN',
                           textAlign: TextAlign.center,
@@ -119,21 +126,31 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         gap(26),
 
-                        // INPUT EMAIL
-                        _buildTextField(controller: email, hint: 'Masukkan Alamat Email'),
+                        // Input Email
+                        _buildTextField(
+                          controller: email,
+                          hint: 'Masukkan Alamat Email',
+                        ),
                         gap(16),
 
-                        // INPUT PASSWORD
-                        _buildTextField(controller: pass, hint: 'Masukkan Password Anda', isPassword: true),
+                        // Input Password
+                        _buildTextField(
+                          controller: pass,
+                          hint: 'Masukkan Password Anda',
+                          isPassword: true,
+                        ),
                         gap(10),
 
-                        // FORGOT PASSWORD
+                        // Tombol Lupa Password
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
+                              // Navigasi ke halaman Lupa Password via OTP (No. HP)
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordPhonePage(),
+                                ),
                               );
                             },
                             style: TextButton.styleFrom(padding: EdgeInsets.zero),
@@ -149,7 +166,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         gap(8),
 
-                        // TOMBOL MASUK
+                        // Tombol LOGIN (Utama)
                         Container(
                           width: double.infinity,
                           height: 54,
@@ -169,25 +186,28 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                           child: ElevatedButton(
-                            // 2. LOGIKA DI PINDAH KE SINI
-                            // Cek status loading dari Provider
-                            onPressed: authProvider.isLoading 
-                              ? null 
-                              : () {
-                                  // Validasi UI sederhana boleh tetap disini
-                                  if (email.text.trim().isEmpty || pass.text.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Mohon isi Email dan Password'), backgroundColor: AppColors.error),
-                                    );
-                                    return;
-                                  }
-                                  // Panggil fungsi di Provider
-                                  authProvider.signIn(email.text.trim(), pass.text, context);
-                                },
+                            onPressed: authProvider.isLoading
+                                ? null
+                                : () {
+                                    // Validasi Input Kosong
+                                    if (email.text.trim().isEmpty || pass.text.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Mohon isi Email dan Password'),
+                                          backgroundColor: AppColors.error,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    // Panggil fungsi Login di AuthProvider
+                                    authProvider.signIn(email.text.trim(), pass.text, context);
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
                             ),
                             child: authProvider.isLoading
                                 ? const CircularProgressIndicator(color: Colors.white)
@@ -201,18 +221,45 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                           ),
                         ),
-                        
+
                         gap(20),
                         const DividerWithText(text: 'atau'),
                         gap(14),
 
+                        // Tombol Login Google
                         GoogleButton(
                           label: 'Masuk dengan Google',
-                          // 3. Panggil fungsi Google Sign In Provider
                           onTap: () => authProvider.signInWithGoogle(context),
+                        ),
+                        
+                        gap(16),
+
+                        // Tombol Login No. HP (Baru Ditambahkan untuk Testing OTP)
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const PhoneLoginPage()),
+                            );
+                          },
+                          icon: const Icon(Icons.phone_android),
+                          label: Text(
+                            "Masuk dengan Nomor HP",
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: AppColors.primary),
+                            foregroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
 
                         gap(20),
+
+                        // Link ke Halaman Daftar (Register)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -243,15 +290,17 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          
-          // Overlay Loading (Optional, karena tombol sudah loading)
+
+          // Loading Overlay (Jika Provider sedang loading)
           if (authProvider.isLoading)
-             Container(
-               color: Colors.black.withOpacity(0.1),
-               child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-             ),
+            Container(
+              color: Colors.black.withOpacity(0.1),
+              child: const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            ),
         ],
       ),
     );
   }
-} 
+}
