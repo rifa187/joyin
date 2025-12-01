@@ -10,7 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import '../auth/firebase_auth_service.dart';
 import '../core/user_model.dart' as app_model;
 import '../providers/user_provider.dart';
-import '../dashboard/dashboard_page.dart';
+import '../providers/package_provider.dart';
+import '../dashboard/dashboard_gate.dart';
 import '../core/app_colors.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -268,10 +269,19 @@ class AuthProvider with ChangeNotifier {
       
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_purchased_package', currentUser.hasPurchasedPackage);
+      final savedPackage = prefs.getString('selected_package');
+      final savedDuration = prefs.getInt('selected_package_duration_months');
+      if (context.mounted && savedPackage != null && savedPackage.isNotEmpty) {
+        final packageProvider = Provider.of<PackageProvider>(context, listen: false);
+        packageProvider.loadCurrentUserPackage(savedPackage);
+        if (savedDuration != null) {
+          packageProvider.selectDuration(savedPackage, savedDuration);
+        }
+      }
 
       if (!context.mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
+        MaterialPageRoute(builder: (_) => const DashboardGate()),
         (route) => false,
       );
     } catch (e) {

@@ -3,13 +3,18 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 // IMPORT FILE KAMU
+import 'package:joyin/providers/package_provider.dart';
+import 'package:joyin/providers/dashboard_provider.dart';
 import '../core/app_colors.dart';
 import '../providers/user_provider.dart';
-import '../providers/auth_provider.dart'; // Untuk Logout (opsional)
 import 'widgets/profile_avatar.dart'; // Widget Avatar Canggih
 import 'edit_profile_page.dart';
 import 'settings_page.dart';
+import 'referral_page.dart';
+import '../tutorial/tutorial_page.dart';
 import '../auth/login_page.dart'; // Untuk navigasi setelah logout
+import '../screens/pilih_paket_screen.dart';
+import 'about_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -26,9 +31,10 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Gunakan Consumer agar halaman selalu update saat data berubah
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, _) {
+    return Consumer2<UserProvider, PackageProvider>(
+      builder: (context, userProvider, packageProvider, _) {
         final user = userProvider.user;
+        final bool hasPackage = packageProvider.currentUserPackage != null && packageProvider.currentUserPackage!.isNotEmpty;
 
         return Scaffold(
           backgroundColor: const Color(0xFFF0F2F5),
@@ -108,7 +114,7 @@ class ProfilePage extends StatelessWidget {
                                 Text(
                                   user?.email ?? 'email@contoh.com',
                                   style: GoogleFonts.poppins(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withAlpha((255 * 0.9).round()),
                                     fontSize: 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -124,6 +130,20 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
+                // --- Subscription Status Card ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: hasPackage
+                        ? _buildSubscriptionInfo(context, packageProvider.currentUserPackage!)
+                        : _buildNoSubscription(context),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // --- MENU LIST ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -132,6 +152,16 @@ class ProfilePage extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Column(
                       children: [
+                        _buildMenuItem(
+                          context,
+                          icon: Icons.card_giftcard_outlined,
+                          text: 'Kode Referral',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ReferralPage()),
+                          ),
+                        ),
+                        const Divider(height: 1),
                         _buildMenuItem(
                           context, 
                           icon: Icons.person_outline, 
@@ -150,18 +180,20 @@ class ProfilePage extends StatelessWidget {
                           context, 
                           icon: Icons.help_outline, 
                           text: 'Bantuan',
-                          onTap: () {
-                            // Navigasi ke Bantuan (jika ada)
-                          },
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TutorialPage()),
+                          ),
                         ),
                         const Divider(height: 1),
                         _buildMenuItem(
                           context, 
                           icon: Icons.info_outline, 
                           text: 'Tentang Aplikasi',
-                          onTap: () {
-                            // Navigasi ke Tentang (jika ada)
-                          },
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AboutPage()),
+                          ),
                         ),
                       ],
                     ),
@@ -184,6 +216,40 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  Widget _buildSubscriptionInfo(BuildContext context, String currentPackage) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      leading: const Icon(Icons.star, color: Colors.amber),
+      title: Text('Paket Aktif: $currentPackage', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+      subtitle: Text('Lihat detail dan perpanjang', style: GoogleFonts.poppins()),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Provider.of<DashboardProvider>(context, listen: false).setSelectedIndex(4);
+      },
+    );
+  }
+
+  Widget _buildNoSubscription(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      leading: const Icon(Icons.star_border, color: Colors.grey),
+      title: Text('Belum Berlangganan', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+      subtitle: Text('Pilih paket untuk mulai', style: GoogleFonts.poppins()),
+      trailing: ElevatedButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.joyin,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text('Lihat Paket', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
   // Helper Widget untuk Menu Item
   Widget _buildMenuItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap}) {
     return ListTile(
@@ -191,7 +257,7 @@ class ProfilePage extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.joyin.withOpacity(0.1),
+          color: AppColors.joyin.withAlpha((255 * 0.1).round()),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: AppColors.joyin, size: 22),

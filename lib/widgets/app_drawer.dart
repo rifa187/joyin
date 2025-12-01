@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/user_model.dart';
 import '../auth/login_page.dart';
-import '../profile/settings_page.dart';
 import 'package:joyin/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart'; // Import provider
 import 'package:joyin/providers/dashboard_provider.dart'; // Import DashboardProvider
@@ -67,31 +66,10 @@ class AppDrawer extends StatelessWidget {
             _buildDrawerItem(
               context: context, // Pass context
               dashboardProvider: dashboardProvider, // Pass dashboardProvider
-              icon: Icons.inventory_2_outlined,
-              text: AppLocalizations.of(context)!.myPackage,
-              index: 4,
-              onTap: () => onItemTap(4),
-            ),
-            _buildDrawerItem(
-              context: context, // Pass context
-              dashboardProvider: dashboardProvider, // Pass dashboardProvider
               icon: Icons.person_outline,
               text: AppLocalizations.of(context)!.profile,
               index: 5,
               onTap: () => onItemTap(5),
-            ),
-            _buildDrawerItem(
-              context: context, // Pass context
-              dashboardProvider: dashboardProvider, // Pass dashboardProvider
-              icon: Icons.settings_outlined,
-              text: AppLocalizations.of(context)!.settings,
-              index: 6,
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
-                );
-              },
             ),
             const SizedBox(height: 20),
             Padding(

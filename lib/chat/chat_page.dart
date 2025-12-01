@@ -1,163 +1,182 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:joyin/screens/pilih_paket_screen.dart';
-import 'package:joyin/widgets/gaps.dart';
+import 'package:joyin/providers/package_provider.dart';
+import 'package:joyin/widgets/locked_feature_widget.dart';
+import 'package:provider/provider.dart';
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final packageProvider = context.watch<PackageProvider>();
+    final bool hasPackage = packageProvider.currentUserPackage != null &&
+        packageProvider.currentUserPackage!.isNotEmpty;
+
+    final double topPadding = MediaQuery.of(context).padding.top;
+    const double headerHeight = 200;
+    final double contentTop = topPadding + 100;
+    final double contentHeight =
+        MediaQuery.of(context).size.height - contentTop;
+
     return Scaffold(
-      backgroundColor: Colors.transparent, // Set scaffold background to transparent
+      backgroundColor: Colors.grey[100],
       body: Stack(
         children: [
-          // Gradient Background
           Container(
+            height: headerHeight,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF63D1BE), Color(0xFFD6F28F)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                colors: [Color(0xFF4DB6AC), Color(0xFF81C784)],
+              ),
+            ),
+            padding: EdgeInsets.only(top: topPadding + 16, left: 20, right: 20),
+            alignment: Alignment.topCenter,
+            child: Text(
+              'Obrolan',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          // Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Custom Header (Obrolan title and user actions)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Obrolan',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Row(
+          Container(
+            margin: EdgeInsets.only(top: contentTop),
+            height: contentHeight,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            child: hasPackage
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
                         children: [
+                          const SizedBox(height: 12),
+                          Text(
+                            'Chat Page',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Konten obrolan akan tampil di sini.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
                           Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha((255 * 0.2).round()), // 20% opacity
-                              shape: BoxShape.circle,
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            child: IconButton(
-                              icon: const Icon(Icons.person_outline, color: Colors.white),
-                              onPressed: () {
-                                // Handle user profile action
-                              },
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Color(0xFF4DB6AC),
+                                  child: Icon(Icons.chat, color: Colors.white),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Tidak ada percakapan',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Mulai obrolan untuk melihat percakapan pelanggan di sini.',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha((255 * 0.2).round()), // 20% opacity
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-                              onPressed: () {
-                                // Handle dropdown action
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Main Content Card
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0), // Adjust top padding as needed
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
-                          bottomLeft: Radius.circular(30),
-                          bottomRight: Radius.circular(30),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha((255 * 0.05).round()), // 5% opacity
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.sentiment_dissatisfied, // Sad emoji icon
-                                size: 80,
-                                color: Colors.grey[400],
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4DB6AC),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 3,
+                                shadowColor:
+                                    const Color(0xFF4DB6AC).withOpacity(0.4),
                               ),
-                              gap(20),
-                              Text(
-                                'Ups, kamu belum punya paket nih',
-                                textAlign: TextAlign.center,
+                              onPressed: () {},
+                              child: Text(
+                                'Mulai Obrolan',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey[700],
                                 ),
                               ),
-                              gap(10),
-                              Text(
-                                'Yuk pilih paket dulu biar bisa lanjut menikmati semua fitur chatbot dan bikin bisnismu makin lancar',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              gap(30),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => const PilihPaketScreen(),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF63D1BE),
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Pilih Paket',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 120),
+                        ],
+                      ),
+                    ),
+                  )
+                : ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: LockedFeatureWidget(
+                        title: 'Obrolan Terkunci',
+                        message:
+                            'Upgrade paketmu untuk mulai mengobrol dengan pelanggan.',
+                        icon: Icons.chat_bubble_outline,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

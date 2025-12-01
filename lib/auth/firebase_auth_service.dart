@@ -74,6 +74,10 @@ class FirebaseAuthService {
   // ===========================================================================
   Future<UserCredential> signInWithGoogle() async {
     try {
+      // Paksa pemilihan akun setiap kali dengan membersihkan session Google sebelumnya.
+      await _googleSignIn.signOut();
+      await _googleSignIn.disconnect();
+
       // A. Mulai proses login Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) throw Exception('Login dibatalkan.');

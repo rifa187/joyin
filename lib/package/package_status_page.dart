@@ -1,28 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-
-// Pastikan import ini sesuai dengan struktur folder Anda
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/providers/user_provider.dart';
-import 'package:joyin/screens/pilih_paket_screen.dart';
-import '../core/user_model.dart';
-import 'package:joyin/package/package_info.dart';
+import 'package:joyin/widgets/locked_feature_widget.dart';
+import 'package:provider/provider.dart';
+import '../screens/pilih_paket_screen.dart';
 
 class PackageStatusPage extends StatelessWidget {
   const PackageStatusPage({super.key});
 
+  static const Color primaryColor = Color(0xFF4ECDC4);
+
   @override
   Widget build(BuildContext context) {
-    final packageProvider = Provider.of<PackageProvider>(context);
-    final userProvider = Provider.of<UserProvider>(context);
-    final user = userProvider.user;
+    final packageProvider = context.watch<PackageProvider>();
+    final bool hasPackage = packageProvider.currentUserPackage != null &&
+        packageProvider.currentUserPackage!.isNotEmpty;
+    final selectedName = packageProvider.currentUserPackage;
+    final selectedDuration =
+        selectedName != null ? packageProvider.selectedDurations[selectedName] : null;
+    final selectedPackage = selectedName == null
+        ? null
+        : packageProvider.packages
+            .firstWhere((p) => p.name == selectedName, orElse: () => packageProvider.packages.first);
 
     return Scaffold(
-      backgroundColor: Colors.grey[100], 
+      backgroundColor: Colors.grey[100],
       body: Stack(
         children: [
-          // === LAYER 1: Header Gradien Hijau ===
+          // === LAYER 1: HEADER GRADIENT (SAMA SEPERTI HALAMAN PAKET) ===
           Container(
             height: 200,
             decoration: const BoxDecoration(
@@ -34,7 +39,7 @@ class PackageStatusPage extends StatelessWidget {
             ),
           ),
 
-          // === LAYER 2: Judul Halaman ===
+          // === LAYER 2: APPBAR TRANSPARAN (TITLE "Paket Saya") ===
           Positioned(
             top: 0,
             left: 0,
@@ -50,11 +55,11 @@ class PackageStatusPage extends StatelessWidget {
               centerTitle: true,
               backgroundColor: Colors.transparent,
               elevation: 0,
-              automaticallyImplyLeading: false, 
+              automaticallyImplyLeading: false,
             ),
           ),
 
-          // === LAYER 3: Container Putih ===
+          // === LAYER 3: CONTAINER PUTIH BESAR DENGAN RADIUS ATAS ===
           Container(
             margin: const EdgeInsets.only(top: 100),
             height: MediaQuery.of(context).size.height - 100,
@@ -70,266 +75,55 @@ class PackageStatusPage extends StatelessWidget {
                 topLeft: Radius.circular(30),
                 topRight: Radius.circular(30),
               ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  children: [
-                    if (user != null && user.hasPurchasedPackage)
-                      _buildPackageDetails(context, user, packageProvider)
-                    else
-                      _buildNoPackage(context, user),
-                      
-                    const SizedBox(height: 50),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // === WIDGET: Tampilan Jika BELUM Punya Paket ===
-  Widget _buildNoPackage(BuildContext context, User? user) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const SizedBox(height: 40),
-        Icon(
-          Icons.sentiment_dissatisfied_rounded,
-          size: 100,
-          color: Colors.grey[400],
-        ),
-        const SizedBox(height: 24),
-        
-        Text(
-          'Ups, kamu belum punya paket nih',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 12),
-        
-        Text(
-          'Yuk pilih paket dulu biar bisa lanjut menikmati semua fitur chatbot dan bikin bisnismu makin lancar.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
-            fontSize: 14, 
-            color: Colors.grey,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 40),
-        
-        _buildUpgradeButton(context, user),
-      ],
-    );
-  }
-
-  // === WIDGET: Tampilan Jika SUDAH Punya Paket ===
-  Widget _buildPackageDetails(
-    BuildContext context,
-    User user,
-    PackageProvider packageProvider,
-  ) {
-    // FIX: Cek jika kosong, return widget kosong agar tidak error
-    if (packageProvider.packages.isEmpty) {
-      return const SizedBox(); 
-    }
-
-    // Ambil paket user atau fallback ke paket pertama
-    final selectedPackageInfo = packageProvider.packages.firstWhere(
-      (pkg) => pkg.name == packageProvider.currentUserPackage,
-      orElse: () => packageProvider.packages.first,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 10),
-        _buildSectionTitle('Paket Anda Saat Ini', Icons.workspace_premium),
-        const SizedBox(height: 20),
-        _buildCurrentPackageCard(
-          user,
-          selectedPackageInfo,
-          packageProvider.currentUserPackage,
-        ),
-        const SizedBox(height: 30),
-        _buildUpgradeButton(context, user),
-      ],
-    );
-  }
-
-  Widget _buildCurrentPackageCard(
-    User user,
-    PackageInfo selectedPackageInfo,
-    String? currentPackage,
-  ) {
-    const outlineGradient = LinearGradient(
-      colors: [Color(0xFFFFF304), Color(0xFFF09EF1)], 
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    );
-    final packageGradient = const LinearGradient(
-      colors: [Color(0xFF63D1BE), Color(0xFF88E285)], 
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(2.5), 
-      decoration: BoxDecoration(
-        gradient: outlineGradient,
-        borderRadius: BorderRadius.circular(26.0),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFF09EF1).withOpacity(0.5),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20.0),
-              decoration: BoxDecoration(gradient: packageGradient),
-              child: Column(
-                children: [
-                  Text(
-                    'Paket ${currentPackage ?? 'Tidak Ada'}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  if (user.packageDurationMonths != null && user.packageDurationMonths! > 0)
-                    Text(
-                      'Durasi: ${user.packageDurationMonths} Bulan',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Status: Aktif',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Keuntungan Paket:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...selectedPackageInfo.features.map(
-                      (feature) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              color: Color(0xFF56AB2F),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                feature,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13.5,
-                                  color: Colors.black87,
+              child: hasPackage
+                  ? SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: selectedPackage == null
+                          ? const SizedBox.shrink()
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionTitle(
+                                  'Paket Aktif',
+                                  Icons.inventory_2_outlined,
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                _buildActiveCard(
+                                  context,
+                                  selectedPackage.name,
+                                  selectedPackage.price,
+                                  selectedDuration,
+                                ),
+                                const SizedBox(height: 24),
+                                _buildSectionTitle(
+                                  'Fitur Paket',
+                                  Icons.star_border_rounded,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildFeatureList(selectedPackage.features),
+                                const SizedBox(height: 24),
+                                _buildSectionTitle(
+                                  'Kelola Paket',
+                                  Icons.manage_accounts_outlined,
+                                ),
+                                const SizedBox(height: 12),
+                                _buildManageButtons(context),
+                                const SizedBox(height: 32),
+                              ],
                             ),
-                          ],
-                        ),
+                    )
+                  : const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: LockedFeatureWidget(
+                        title: 'Paket Terkunci',
+                        message:
+                            'Upgrade paketmu untuk mengaktifkan fitur paket dan statistik.',
+                        icon: Icons.inventory_2_outlined,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    if (user.packageDurationMonths != null && user.packageDurationMonths! > 0)
-                      Text(
-                        '* Paket aktif selama ${user.packageDurationMonths} bulan.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpgradeButton(BuildContext context, User? user) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          if (user != null) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const PilihPaketScreen()),
-            );
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4DB6AC), 
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
           ),
-          elevation: 3,
-          shadowColor: const Color(0xFF4DB6AC).withOpacity(0.4),
-        ),
-        child: Text(
-          'Upgrade Paket',
-          style: GoogleFonts.poppins(
-            fontSize: 16, 
-            fontWeight: FontWeight.bold
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -337,7 +131,11 @@ class PackageStatusPage extends StatelessWidget {
   Widget _buildSectionTitle(String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF4DB6AC), size: 24),
+        Icon(
+          icon,
+          color: const Color(0xFF4DB6AC),
+          size: 24,
+        ),
         const SizedBox(width: 8),
         Text(
           title,
@@ -345,6 +143,214 @@ class PackageStatusPage extends StatelessWidget {
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Colors.black87,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveCard(
+    BuildContext context,
+    String packageName,
+    String price,
+    int? selectedDuration,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF4DB6AC), Color(0xFF81C784)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withOpacity(0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Paket $packageName',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            price,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.9),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.calendar_today, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  '${selectedDuration ?? 1} bulan',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Aktif',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Paket aktif dan siap digunakan',
+                style: GoogleFonts.poppins(
+                  color: Colors.white.withOpacity(0.9),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureList(List<String> features) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.verified, color: Color(0xFF4DB6AC)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: features
+                  .map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.check, size: 18, color: Color(0xFF4DB6AC)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              f,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManageButtons(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: BorderSide(color: Colors.grey.shade300),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.swap_horiz),
+            label: Text(
+              'Ubah Paket',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.credit_card, color: Colors.white),
+            label: Text(
+              'Perpanjang',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ),
       ],

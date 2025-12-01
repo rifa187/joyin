@@ -1,5 +1,4 @@
-﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 // PROVIDERS & COMPONENTS
@@ -27,7 +26,7 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
-  // ✅ DAFTAR HALAMAN (VERSI FINAL)
+  // ? DAFTAR HALAMAN (VERSI FINAL)
   final List<Widget> _pages = [
     const HomeContent(),        // Index 0: Beranda
     const ChatPage(),           // Index 1: Obrolan
@@ -36,19 +35,6 @@ class _DashboardPageState extends State<DashboardPage> {
     const PackageStatusPage(),  // Index 4: Paket Saya
     const ProfilePage(),        // Index 5: Profil Saya
   ];
-
-  // Judul Halaman di AppBar
-  String _getPageTitle(int index) {
-    switch (index) {
-      case 0: return 'Beranda';
-      case 1: return 'Obrolan';
-      case 2: return 'Laporan';
-      case 3: return 'Pengaturan Bot';
-      case 4: return 'Paket Saya';
-      case 5: return 'Profil Saya';
-      default: return 'Joyin';
-    }
-  }
 
   // Logic Navigasi Edit Profil
   void _navigateToEditProfile(BuildContext context) {
@@ -67,7 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       key: scaffoldKey,
       
-      // ✅ UPDATE 1: Tambahkan selectedIndex == 4 agar halaman Paket 
+      // ? UPDATE 1: Tambahkan selectedIndex == 4 agar halaman Paket 
       // bisa naik ke atas (full screen) seperti Beranda & Profil
       extendBodyBehindAppBar: selectedIndex == 0 || selectedIndex == 4 || selectedIndex == 5,
       
@@ -105,33 +91,20 @@ class _DashboardPageState extends State<DashboardPage> {
           onPressed: () => scaffoldKey.currentState?.openDrawer(),
         ),
       );
-    } 
-    // ✅ UPDATE 2: Hapus AppBar Dashboard khusus untuk tab Paket (Index 4)
-    // karena PackageStatusPage sudah punya header sendiri.
-    else if (index == 4) {
-      return null; 
+    }
+    // Obrolan, Laporan, Bot, dan Paket: tidak perlu AppBar
+    if (index == 1 || index == 2 || index == 3 || index == 4) {
+      return null;
     }
     // Profil: AppBar Transparan + Tanpa Icon Back
-    else if (index == 5) {
+    if (index == 5) {
       return AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
       );
-    } 
-    // Halaman Lain: AppBar Putih Biasa
-    else {
-      return AppBar(
-        title: Text(
-          _getPageTitle(index),
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-      );
     }
+    return null;
   }
 
   Widget _buildBottomNavigationBar(BuildContext context, DashboardProvider provider) {

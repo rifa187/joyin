@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:joyin/providers/package_provider.dart';
+import 'package:joyin/widgets/locked_feature_widget.dart';
+import 'package:provider/provider.dart';
 
 class BotSettingsPage extends StatefulWidget {
   const BotSettingsPage({super.key});
@@ -36,113 +39,177 @@ class _BotSettingsPageState extends State<BotSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final packageProvider = context.watch<PackageProvider>();
+    final bool hasPackage = packageProvider.currentUserPackage != null &&
+        packageProvider.currentUserPackage!.isNotEmpty;
+    final double topPadding = MediaQuery.of(context).padding.top;
+    const double headerHeight = 200;
+    final double contentTop = topPadding + 100;
+    final double contentHeight =
+        MediaQuery.of(context).size.height - contentTop;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5), // Background abu-abu muda
-      // Body dibungkus SingleChildScrollView agar bisa discroll
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // --- KARTU 1: PENGATURAN UMUM ---
-            _buildSectionCard(
-              title: "Pengaturan Umum",
-              children: [
-                _buildTextField(
-                  label: "Nama Bot", 
-                  controller: _botNameController,
-                  hint: "Masukkan nama bot kamu",
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: "Pesan Selamat Datang", 
-                  controller: _welcomeMsgController,
-                  maxLines: 3,
-                  hint: "Halo! Ada yang bisa saya bantu?",
-                ),
-                const SizedBox(height: 20),
-                _buildSwitchRow("Aktifkan Bot", _isBotActive, (val) {
-                  setState(() => _isBotActive = val);
-                }),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // --- KARTU 2: BALASAN OTOMATIS ---
-            _buildSectionCard(
-              title: "Pengaturan Balasan Otomatis",
-              children: [
-                _buildTextField(
-                  label: "Pesan balasan saat bot tidak tahu", 
-                  controller: _fallbackMsgController,
-                  maxLines: 3,
-                  hint: "Maaf, saya belum mengerti maksud Anda.",
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  label: "Jeda balasan otomatis (detik)", 
-                  controller: _delayController,
-                  keyboardType: TextInputType.number,
-                  hint: "Contoh: 2",
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // --- KARTU 3: JAM KERJA ---
-            _buildSectionCard(
-              title: "Jam Kerja",
-              children: [
-                _buildSwitchRow("Aktifkan Jam Kerja", _isWorkingHoursActive, (val) {
-                  setState(() => _isWorkingHoursActive = val);
-                }),
-                const SizedBox(height: 16),
-                // Input ini hanya aktif jika switch jam kerja ON (Opsional UX)
-                Opacity(
-                  opacity: _isWorkingHoursActive ? 1.0 : 0.5,
-                  child: _buildTextField(
-                    label: "Pesan di luar jam kerja", 
-                    controller: _outOfHoursMsgController,
-                    maxLines: 3,
-                    enabled: _isWorkingHoursActive,
-                    hint: "Kami sedang tutup, silakan kembali jam 08.00",
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // --- TOMBOL SIMPAN ---
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Panggil fungsi API untuk simpan data ke Backend Bun.js
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Pengaturan berhasil disimpan!")),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primaryColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
-                ),
-                child: Text(
-                  "Simpan Perubahan",
-                  style: GoogleFonts.poppins(
-                    fontSize: 16, 
-                    fontWeight: FontWeight.bold, 
-                    color: Colors.white
-                  ),
-                ),
+      backgroundColor: const Color(0xFFF0F2F5),
+      body: Stack(
+        children: [
+          Container(
+            height: headerHeight,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF4DB6AC), Color(0xFF81C784)],
               ),
             ),
-            const SizedBox(height: 50), // Spasi bawah
-          ],
-        ),
+            padding: EdgeInsets.only(top: topPadding + 16, left: 20, right: 20),
+            alignment: Alignment.topCenter,
+            child: Text(
+              'Pengaturan Bot',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Container(
+            margin: EdgeInsets.only(top: contentTop),
+            height: contentHeight,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            child: hasPackage
+                ? ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          _buildSectionCard(
+                            title: "Pengaturan Umum",
+                            children: [
+                              _buildTextField(
+                                label: "Nama Bot",
+                                controller: _botNameController,
+                                hint: "Masukkan nama bot kamu",
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                label: "Pesan Selamat Datang",
+                                controller: _welcomeMsgController,
+                                maxLines: 3,
+                                hint: "Halo! Ada yang bisa saya bantu?",
+                              ),
+                              const SizedBox(height: 20),
+                              _buildSwitchRow("Aktifkan Bot", _isBotActive, (val) {
+                                setState(() => _isBotActive = val);
+                              }),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _buildSectionCard(
+                            title: "Pengaturan Balasan Otomatis",
+                            children: [
+                              _buildTextField(
+                                label: "Pesan balasan saat bot tidak tahu",
+                                controller: _fallbackMsgController,
+                                maxLines: 3,
+                                hint: "Maaf, saya belum mengerti maksud Anda.",
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                label: "Jeda balasan otomatis (detik)",
+                                controller: _delayController,
+                                keyboardType: TextInputType.number,
+                                hint: "Contoh: 2",
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _buildSectionCard(
+                            title: "Jam Kerja",
+                            children: [
+                              _buildSwitchRow(
+                                "Aktifkan Jam Kerja",
+                                _isWorkingHoursActive,
+                                (val) {
+                                  setState(() => _isWorkingHoursActive = val);
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Opacity(
+                                opacity: _isWorkingHoursActive ? 1.0 : 0.5,
+                                child: _buildTextField(
+                                  label: "Pesan di luar jam kerja",
+                                  controller: _outOfHoursMsgController,
+                                  maxLines: 3,
+                                  enabled: _isWorkingHoursActive,
+                                  hint: "Kami sedang tutup, silakan kembali jam 08.00",
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Pengaturan berhasil disimpan!"),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4DB6AC),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                elevation: 3,
+                                shadowColor:
+                                    const Color(0xFF4DB6AC).withOpacity(0.4),
+                              ),
+                              child: Text(
+                                "Simpan Perubahan",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 50),
+                        ],
+                      ),
+                    ),
+                  )
+                : ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: LockedFeatureWidget(
+                        title: 'Pengaturan Bot Terkunci',
+                        message: 'Upgrade paketmu untuk mengatur bot-mu.',
+                        icon: Icons.smart_toy_outlined,
+                      ),
+                    ),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -246,7 +313,7 @@ class _BotSettingsPageState extends State<BotSettingsPage> {
           child: Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: _primaryColor,
+            activeThumbColor: _primaryColor,
             activeTrackColor: _primaryColor.withOpacity(0.4),
           ),
         ),
