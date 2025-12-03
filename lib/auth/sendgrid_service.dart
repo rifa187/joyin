@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart'; // Untuk debugPrint yang lebih rapi
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // <--- TAMBAHAN IMPORT
 
 class SendGridService {
   // --- KONFIGURASI ---
-  // Pastikan API Key ini memiliki akses "Mail Send" (Full Access)
-  final String _apiKey = ''; 
+  // API Key diambil dari file .env (tanpa tanda kutip)
+  final String _apiKey = dotenv.env['SENDGRID_API_KEY'] ?? ''; 
   
   // Email ini WAJIB berstatus VERIFIED di SendGrid (Sender Authentication)
   final String _senderEmail = 'bejoyinin@gmail.com'; 
@@ -54,7 +55,8 @@ class SendGridService {
       final response = await http.post(
         url,
         headers: {
-          'Authorization': 'Bearer $_apiKey',
+          // PENTING: API Key sekarang diambil dari variabel yang di-load dari .env
+          'Authorization': 'Bearer $_apiKey', 
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -70,16 +72,15 @@ class SendGridService {
         debugPrint("❌ PESAN ERROR: ${response.body}");
 
         if (response.statusCode == 401) {
-          debugPrint("👉 SOLUSI: API Key salah atau tidak valid. Cek Settings > API Keys.");
+          debugPrint("👉 SOLUSI: API Key salah atau hangus. Cek Settings > API Keys.");
         } else if (response.statusCode == 403) {
-          debugPrint("👉 SOLUSI: Sender Identity ($_senderEmail) belum diverifikasi atau API Key kurang izin.");
+          debugPrint("👉 SOLUSI: Sender Identity ($_senderEmail) belum diverifikasi.");
         }
         
         return false;
       }
     } catch (e) {
       debugPrint("❌ SENDGRID ERROR KONEKSI: $e");
-      debugPrint("👉 SOLUSI: Pastikan internet aktif & permission internet di AndroidManifest sudah ada.");
       return false;
     }
   }

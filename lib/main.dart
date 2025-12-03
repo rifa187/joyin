@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // 1. IMPORT DOTENV
 
 // --- IMPORT CONFIG & PAGES ---
 import 'package:joyin/firebase_options.dart';
 import 'package:joyin/onboarding/onboarding_page.dart'; 
 import 'package:joyin/dashboard/dashboard_page.dart';
-// import 'package:joyin/auth/login_page.dart'; // Tidak wajib di main, karena dipanggil dari Onboarding
 import 'package:joyin/gen_l10n/app_localizations.dart';
 
 // --- IMPORT PROVIDERS ---
@@ -22,6 +22,13 @@ final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 2. LOAD ENVIRONMENT VARIABLES (Wajib untuk SendGrid)
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Warning: File .env tidak ditemukan. Pastikan file ada di root project.");
+  }
   
   // Inisialisasi Firebase
   try {
@@ -108,19 +115,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.hasData) {
           final user = snapshot.data!;
           
-          // --- SOLUSI MASALAH 1 (PERSIAPAN) ---
-          // Kita memanggil fungsi untuk load data profil user dari Firestore
-          // agar saat Dashboard terbuka, nama/email sudah ada.
+          // --- PENTING: LOAD DATA USER ---
+          // Kita aktifkan baris ini agar data Nama & Role Admin terbaca saat Auto Login
           WidgetsBinding.instance.addPostFrameCallback((_) {
-             // Pastikan di UserProvider kamu sudah ada fungsi loadUserData
-             // Provider.of<UserProvider>(context, listen: false).loadUserData(user.uid);
+             Provider.of<UserProvider>(context, listen: false).loadUserData(user.uid);
           });
 
           return const DashboardPage();
         }
 
         // 3. Jika User BELUM LOGIN -> Masuk Onboarding
-        // Pastikan di dalam OnboardingPage ada tombol menuju Login/Register
         return const OnboardingPage();
       },
     );
