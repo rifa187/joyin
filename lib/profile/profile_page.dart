@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider; // Hide agar tidak bentrok
 
 // IMPORT FILE KAMU
-import '../core/app_colors.dart';
-import '../providers/user_provider.dart';
-import '../providers/auth_provider.dart'; 
-import 'widgets/profile_avatar.dart'; 
-import 'edit_profile_page.dart';
-import 'settings_page.dart';
-import '../auth/login_page.dart'; 
+import '../../core/app_colors.dart';
+import '../../providers/user_provider.dart';
+import '../../providers/auth_provider.dart'; 
+import '../profile/widgets/profile_avatar.dart'; 
+import '../profile/edit_profile_page.dart'; 
+import '../profile/settings_page.dart'; 
+import '../../auth/login_page.dart'; 
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   // Fungsi Logout
   void _handleLogout(BuildContext context) {
-    // Tampilkan Dialog Konfirmasi Dulu (UX yang baik)
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -32,11 +32,17 @@ class ProfilePage extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context); // Tutup dialog
               
-              // Lakukan Navigasi ke Login Page dan Hapus Route Sebelumnya
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-                (route) => false,
-              );
+              // Logout Provider
+              // PERBAIKAN: Hapus 'await' jika method logout() di AuthProvider bertipe void
+              Provider.of<AuthProvider>(context, listen: false).logout();
+
+              // Kembali ke Login Page (Cek mounted agar aman)
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
             },
             child: Text("Keluar", style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
@@ -47,16 +53,57 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Kita panggil refreshUser sekali saat build untuk memastikan data paling baru
+    // (Opsional, tapi bagus agar data selalu sinkron)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProvider>(context, listen: false).refreshUser();
+    });
+
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
-        final user = userProvider.user;
+        // --- LOGIKA MENAMPILKAN DATA USER (PRIORITAS FIRESTORE) ---
+        
+        // 1. Ambil data dari UserProvider (Data Firestore yang lengkap)
+        final firestoreUser = userProvider.user;
+        
+        // 2. Ambil data dari Firebase Auth (Cadangan/Fallback)
+        final authUser = FirebaseAuth.instance.currentUser;
+
+        // Default Values
+        String displayName = "Pengguna Baru"; 
+        String emailDisplay = "Belum ada email";
+        String? displayPhoto;
+
+        // LOGIKA PEMILIHAN DATA:
+        // Prioritaskan data dari Firestore (karena ada nama, no hp, dll).
+        // Jika Firestore kosong (null), baru ambil dari Auth.
+
+        if (firestoreUser != null) {
+          // --- SKENARIO A: DATA FIRESTORE ADA (Sudah Register/OTP Sukses) ---
+          displayName = firestoreUser.name; // Mengambil dari field 'name' di user_model.dart
+          emailDisplay = firestoreUser.email;
+          displayPhoto = firestoreUser.photoUrl;
+        } else if (authUser != null) {
+          // --- SKENARIO B: DATA FIRESTORE BELUM LOAD (Pakai data Auth sementara) ---
+          emailDisplay = authUser.email ?? emailDisplay;
+          
+          if (authUser.displayName != null && authUser.displayName!.isNotEmpty) {
+            displayName = authUser.displayName!;
+          } else {
+             displayName = emailDisplay.split('@')[0];
+          }
+          
+          // PERBAIKAN: Firebase Auth menggunakan .photoURL (bukan photoUrl)
+          displayPhoto = authUser.photoURL; 
+        }
+        // -------------------------------------
 
         return Scaffold(
           backgroundColor: const Color(0xFFF0F2F5),
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // --- HEADER (GRADIENT) ---
+                // HEADER
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
@@ -71,55 +118,32 @@ class ProfilePage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Judul Halaman (Tombol Logout DIHAPUS dari sini agar tidak dobel)
                       Text(
                         'Akun Saya',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                       ),
-                      
                       const SizedBox(height: 24),
-                      
-                      // Info User (Foto & Nama)
                       Row(
                         children: [
-                          // FOTO PROFIL
                           ProfileAvatar(
-                            photoUrl: user?.photoUrl,
+                            // Menggunakan variabel yang sudah dinormalisasi di atas
+                            photoUrl: displayPhoto, 
                             isLoading: false,
-                            onEditTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                              );
-                            }, 
+                            onEditTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())), 
                           ),
-                          
                           const SizedBox(width: 16),
-                          
-                          // Teks Nama & Email
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  user?.displayName ?? 'Nama Pengguna',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  displayName, // DATA NAMA SEKARANG PASTI TAMPIL
+                                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  user?.email ?? 'email@contoh.com',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 14,
-                                  ),
+                                  emailDisplay, 
+                                  style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.9), fontSize: 14),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ],
@@ -133,7 +157,7 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // --- MENU LIST ---
+                // MENU LIST
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Card(
@@ -141,55 +165,22 @@ class ProfilePage extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Column(
                       children: [
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.person_outline, 
-                          text: 'Edit Profil',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())),
-                        ),
+                        _buildMenuItem(context, icon: Icons.person_outline, text: 'Edit Profil', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage()))),
                         const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.settings_outlined, 
-                          text: 'Pengaturan',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
-                        ),
+                        _buildMenuItem(context, icon: Icons.settings_outlined, text: 'Pengaturan', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
                         const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.help_outline, 
-                          text: 'Bantuan',
-                          onTap: () {},
-                        ),
+                        _buildMenuItem(context, icon: Icons.help_outline, text: 'Bantuan', onTap: () {}),
                         const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.info_outline, 
-                          text: 'Tentang Aplikasi',
-                          onTap: () {},
-                        ),
-                        
-                        // --- TOMBOL KELUAR (Dipindah ke sini) ---
+                        _buildMenuItem(context, icon: Icons.info_outline, text: 'Tentang Aplikasi', onTap: () {}),
                         const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.logout, 
-                          text: 'Keluar',
-                          isDestructive: true, // Warna Merah
-                          onTap: () => _handleLogout(context),
-                        ),
+                        _buildMenuItem(context, icon: Icons.logout, text: 'Keluar', isDestructive: true, onTap: () => _handleLogout(context)),
                       ],
                     ),
                   ),
                 ),
                 
                 const SizedBox(height: 30),
-                
-                // Versi Aplikasi
-                Text(
-                  'Versi 1.0.0',
-                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
-                ),
+                Text('Versi 1.0.0', style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
                 const SizedBox(height: 20),
               ],
             ),
@@ -199,36 +190,15 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // Helper Widget untuk Menu Item
-  Widget _buildMenuItem(BuildContext context, {
-    required IconData icon, 
-    required String text, 
-    required VoidCallback onTap,
-    bool isDestructive = false, // Opsi untuk warna merah (Logout)
-  }) {
+  Widget _buildMenuItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap, bool isDestructive = false}) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          // Jika Destructive (Logout) warnanya merah muda, jika tidak hijau muda
-          color: isDestructive 
-              ? Colors.red.withOpacity(0.1) 
-              : AppColors.joyin.withOpacity(0.1),
-          shape: BoxShape.circle,
-        ),
-        // Icon Merah jika logout
+        decoration: BoxDecoration(color: isDestructive ? Colors.red.withOpacity(0.1) : AppColors.joyin.withOpacity(0.1), shape: BoxShape.circle),
         child: Icon(icon, color: isDestructive ? Colors.red : AppColors.joyin, size: 22),
       ),
-      title: Text(
-        text, 
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w500,
-          fontSize: 15,
-          // Teks Merah jika logout
-          color: isDestructive ? Colors.red : Colors.black87
-        )
-      ),
+      title: Text(text, style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 15, color: isDestructive ? Colors.red : Colors.black87)),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       onTap: onTap,
     );

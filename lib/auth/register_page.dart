@@ -11,7 +11,8 @@ import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
 import '../core/app_colors.dart';
 
-// TIDAK PERLU IMPORT REGISTER_OTP_PAGE LAGI
+// IMPORT HALAMAN OTP
+import 'otp_verification_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -44,15 +45,17 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
-  // === LOGIKA BARU: REGISTER LANGSUNG (TANPA OTP) ===
+  // === LOGIKA BARU: MENUJU OTP ===
   void _handleRegister() {
-    // 1. Validasi Form
+    // 1. Validasi Form Dasar
     if (name.text.isEmpty || email.text.isEmpty || phone.text.isEmpty || pass.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mohon lengkapi semua data'), backgroundColor: AppColors.error),
       );
       return;
     }
+    
+    // Validasi Password Sama
     if (pass.text != pass2.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password tidak sama'), backgroundColor: AppColors.error),
@@ -60,15 +63,28 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // 2. Panggil Fungsi Register Email di AuthProvider
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    authProvider.registerWithEmail(
-      name: name.text.trim(),
-      email: email.text.trim(),
-      phone: phone.text.trim(), // Simpan nomor apa adanya sebagai data kontak
-      password: pass.text,
-      context: context,
+    // Validasi Checkbox
+    if (!agree) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Anda harus menyetujui syarat & ketentuan'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    // 2. NAVIGASI KE OTP (PERBAIKAN DI SINI)
+    // Kita harus membawa SEMUA data (Nama, Email, Password, DAN NO HP) ke halaman sebelah.
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OtpVerificationPage(
+          email: email.text.trim(),
+          isRegister: true,           
+          name: name.text.trim(),     
+          password: pass.text,  
+          // TAMBAHAN PENTING: Kirim No HP agar bisa disimpan ke database nanti      
+          phoneNumber: phone.text.trim(), 
+        ),
+      ),
     );
   }
 

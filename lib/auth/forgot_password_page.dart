@@ -1,9 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:joyin/widgets/fields.dart';
-import 'package:joyin/widgets/gaps.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+
+// Ganti import ini jika lokasi widget fields/gaps kamu berbeda
+import '../widgets/fields.dart';
+import '../widgets/gaps.dart';
+
+// IMPORT HALAMAN OTP
+import 'otp_verification_page.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -13,41 +16,53 @@ class ForgotPasswordPage extends StatefulWidget {
 }
 
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final email = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
 
   @override
   void dispose() {
-    email.dispose();
+    emailController.dispose();
     super.dispose();
   }
 
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  // === LOGIKA UTAMA: KIRIM OTP RESET PASSWORD ===
+  void _handleForgotPassword() {
+    final email = emailController.text.trim();
 
-  Future<void> _sendPasswordResetEmail() async {
-    final em = email.text.trim();
-
-    if (em.isEmpty) {
-      if (!mounted) return;
-      _showErrorSnackBar('Email harus diisi');
+    // 1. Validasi Email Kosong & Format
+    if (email.isEmpty) {
+      _showSnackBar('Email harus diisi', isError: true);
+      return;
+    }
+    
+    // Validasi format email sederhana
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showSnackBar('Format email tidak valid', isError: true);
       return;
     }
 
-    if (kIsWeb) {
-      // For web, the custom backend needs to implement a password reset endpoint.
-      // For now, keep the existing message.
-      _showErrorSnackBar(
-        'Fitur reset password untuk web tidak tersedia. Silakan hubungi admin.',
-      );
-    } else if (Platform.isAndroid) {
-      _showErrorSnackBar('Reset password tidak tersedia untuk akun lokal.');
-    } else {
-      _showErrorSnackBar('Password reset not supported on this platform.');
-    }
+    // 2. Navigasi ke Halaman OTP
+    // Kita kirim isRegister: false -> Agar OTP Page tahu ini mode Reset Password
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => OtpVerificationPage(
+          email: email,
+          isRegister: false, // MODE RESET PASSWORD
+        ),
+      ),
+    );
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -72,11 +87,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // TOMBOL BACK
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.white.withAlpha((255 * 0.25).round()),
+                          color: Colors.white.withOpacity(0.25),
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
@@ -85,7 +101,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         ),
                       ),
                     ),
-                    gap(20),
+                    const SizedBox(height: 20),
+
+                    // KARTU PUTIH UTAMA
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
@@ -94,7 +112,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withAlpha((255 * 0.08).round()),
+                            color: Colors.black.withOpacity(0.08),
                             blurRadius: 30,
                             offset: const Offset(0, 18),
                           ),
@@ -103,10 +121,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          // ICON GEMBOK
                           Container(
                             padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8FBF6),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE8FBF6),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -115,7 +134,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               size: 30,
                             ),
                           ),
-                          gap(16),
+                          const SizedBox(height: 16),
+                          
+                          // JUDUL
                           Text(
                             'Lupa Password',
                             style: GoogleFonts.poppins(
@@ -123,41 +144,55 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          gap(6),
+                          const SizedBox(height: 6),
+                          
+                          // DESKRIPSI
                           Text(
-                            'Masukkan email akun Joyin Anda dan kami akan mengirimkan tautan reset password.',
+                            'Masukkan email akun Joyin Anda dan kami akan mengirimkan kode OTP untuk reset password.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
                               color: const Color(0xFF7C8BA0),
                               fontSize: 13,
                             ),
                           ),
-                          gap(24),
+                          const SizedBox(height: 24),
+                          
+                          // INPUT EMAIL
+                          // PERBAIKAN DI SINI: Gunakan 'keyboardType' bukan 'inputType'
                           RoundField(
-                            c: email,
+                            c: emailController,
                             hint: 'Masukkan Alamat Email',
+                            keyboardType: TextInputType.emailAddress, // <--- FIXED
+                            prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
                           ),
-                          gap(18),
-                          ElevatedButton(
-                            onPressed: _sendPasswordResetEmail,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF63D1BE),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(22),
+                          const SizedBox(height: 18),
+                          
+                          // TOMBOL KIRIM KODE
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _handleForgotPassword,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF63D1BE),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22),
+                                ),
+                              ),
+                              child: Text(
+                                'Kirim Kode OTP',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
-                            child: Text(
-                              'Kirim Tautan Reset',
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                           ),
-                          gap(12),
+                          const SizedBox(height: 12),
+                          
                           Text(
-                            'Pastikan email aktif agar kami dapat mengirim instruksi pemulihan.',
+                            'Pastikan email aktif agar kami dapat mengirim kode verifikasi.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.poppins(
                               fontSize: 12,
@@ -167,7 +202,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         ],
                       ),
                     ),
-                    gap(24),
+                    const SizedBox(height: 24),
+                    
+                    // TEXT BAWAH
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
                       child: Text(

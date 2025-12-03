@@ -5,11 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 // IMPORT PROVIDERS & MODEL
-import '../core/user_model.dart';
-import '../providers/auth_provider.dart'; 
-import '../providers/user_provider.dart'; 
-import '../widgets/custom_text_field.dart'; 
-import 'widgets/profile_avatar.dart'; 
+import '../../core/user_model.dart'; // Import Model User
+import '../../providers/auth_provider.dart'; 
+import '../../providers/user_provider.dart'; 
+import '../../widgets/custom_text_field.dart'; // Pastikan path ini benar (sesuaikan dengan struktur folder widget kamu)
+import '../profile/widgets/profile_avatar.dart'; 
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key}); 
@@ -32,12 +32,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
     
     // Ambil Data Awal dari UserProvider
+    // PERBAIKAN: Menggunakan properti yang benar dari User Model
     final user = Provider.of<UserProvider>(context, listen: false).user;
 
-    _nameController = TextEditingController(text: user?.displayName);
-    _emailController = TextEditingController(text: user?.email);
-    _dobController = TextEditingController(text: user?.dateOfBirth);
-    _phoneController = TextEditingController(text: user?.phoneNumber);
+    _nameController = TextEditingController(text: user?.name ?? ''); // Pakai 'name' bukan 'displayName'
+    _emailController = TextEditingController(text: user?.email ?? '');
+    _dobController = TextEditingController(text: user?.dateOfBirth ?? '');
+    _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
 
     // Deteksi Perubahan
     _nameController.addListener(_updateChangesStatus);
@@ -58,13 +59,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final user = Provider.of<UserProvider>(context, listen: false).user;
     if (user == null) return;
 
+    // PERBAIKAN: Cek perubahan berdasarkan field model yang benar
     final bool currentHasChanges =
-        _nameController.text != (user.displayName ?? '') ||
+        _nameController.text != (user.name) || 
         _dobController.text != (user.dateOfBirth ?? '') ||
         _phoneController.text != (user.phoneNumber ?? '');
 
     if (currentHasChanges != _hasChanges) {
-      setState(() => _hasChanges = currentHasChanges);
+      if (mounted) {
+        setState(() => _hasChanges = currentHasChanges);
+      }
     }
   }
 
@@ -73,8 +77,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        imageQuality: 20, // ⚠️ TURUNKAN JADI 20-30 (Agar size string kecil)
-        maxWidth: 300,    // ⚠️ KECILKAN RESOLUSI (Cukup untuk avatar bulat)
+        imageQuality: 30, // Kompresi agar ringan di upload
+        maxWidth: 500,    
       );
 
       if (pickedFile != null && mounted) {
@@ -86,12 +90,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  // --- LOGIC 2: SIMPAN DATA TEKS (DIPERBARUI) ---
+  // --- LOGIC 2: SIMPAN DATA TEKS ---
   Future<void> _saveProfile() async {
     // Validasi
-    if (_nameController.text.trim().isEmpty || _phoneController.text.trim().isEmpty) {
+    if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama dan No. Telepon tidak boleh kosong')),
+        const SnackBar(content: Text('Nama tidak boleh kosong')),
       );
       return;
     }
@@ -103,6 +107,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       dob: _dobController.text.trim(),
       context: context,
     );
+    
+    // Reset status perubahan setelah simpan sukses
+    if (mounted) {
+       setState(() => _hasChanges = false);
+    }
   }
 
   void _showPicker(BuildContext context) {
@@ -245,7 +254,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           
           // TOMBOL SIMPAN
           ElevatedButton(
-            onPressed: (_hasChanges && !isLoading) ? _saveProfile : null, // Logic Simpan Disini
+            onPressed: (_hasChanges && !isLoading) ? _saveProfile : null, 
             style: ElevatedButton.styleFrom(
               backgroundColor: _hasChanges ? const Color(0xFF63D1BE) : const Color(0xFFB0BEC5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

@@ -6,17 +6,16 @@ import 'package:provider/provider.dart';
 import 'package:joyin/providers/auth_provider.dart';
 
 // IMPORT HALAMAN LAIN
-// Pastikan path import ini sesuai dengan struktur folder Anda
-import 'package:joyin/auth/forgot_password_phone_page.dart';
+// --- PERBAIKAN: Gunakan ForgotPasswordPage (Email) bukan PhonePage ---
+import 'package:joyin/auth/forgot_password_page.dart'; 
 import 'package:joyin/auth/register_page.dart';
-import 'package:joyin/auth/phone_login_page.dart'; // Import halaman Login No. HP
+import 'package:joyin/auth/phone_login_page.dart'; 
 
 // IMPORT WIDGETS & CONFIG
-// Sesuaikan path jika berbeda, misal: 'package:joyin/widgets/...'
 import 'package:joyin/core/app_colors.dart';
 import 'package:joyin/widgets/gaps.dart';
 import 'package:joyin/widgets/buttons.dart'; 
-import 'package:joyin/widgets/misc.dart'; // Untuk DividerWithText
+import 'package:joyin/widgets/misc.dart'; 
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -77,7 +76,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Mengambil instance AuthProvider
     final authProvider = Provider.of<AuthProvider>(context);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -95,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Tombol Back (Pojok Kiri Atas)
+                        // Tombol Back
                         Align(
                           alignment: Alignment.topLeft,
                           child: IconButton(
@@ -141,15 +139,15 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         gap(10),
 
-                        // Tombol Lupa Password
+                        // Tombol Lupa Password (SUDAH DIPERBAIKI)
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // Navigasi ke halaman Lupa Password via OTP (No. HP)
+                              // Navigasi ke halaman Lupa Password via Email (YANG BARU)
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const ForgotPasswordPhonePage(),
+                                  builder: (_) => const ForgotPasswordPage(),
                                 ),
                               );
                             },
@@ -189,7 +187,6 @@ class _LoginPageState extends State<LoginPage> {
                             onPressed: authProvider.isLoading
                                 ? null
                                 : () {
-                                    // Validasi Input Kosong
                                     if (email.text.trim().isEmpty || pass.text.isEmpty) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
@@ -199,7 +196,6 @@ class _LoginPageState extends State<LoginPage> {
                                       );
                                       return;
                                     }
-                                    // Panggil fungsi Login di AuthProvider
                                     authProvider.signIn(email.text.trim(), pass.text, context);
                                   },
                             style: ElevatedButton.styleFrom(
@@ -234,7 +230,7 @@ class _LoginPageState extends State<LoginPage> {
                         
                         gap(16),
 
-                        // Tombol Login No. HP (Baru Ditambahkan untuk Testing OTP)
+                        // Tombol Login No. HP
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.push(
@@ -259,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         gap(20),
 
-                        // Link ke Halaman Daftar (Register)
+                        // Link Daftar
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -291,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
-          // Loading Overlay (Jika Provider sedang loading)
+          // Loading Overlay
           if (authProvider.isLoading)
             Container(
               color: Colors.black.withOpacity(0.1),

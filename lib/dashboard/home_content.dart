@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // PENTING: Untuk ambil data user langsung
 
-import '../core/app_colors.dart';
-import '../providers/user_provider.dart';
-// Import file grafik yang baru kita buat
-import 'widgets/dashboard_charts.dart'; 
+import '../../core/app_colors.dart';
+import '../../providers/user_provider.dart';
+// Pastikan nama file ini sesuai dengan file chart kamu
+import '/dashboard/widgets/dashboard_charts.dart'; 
 
 class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
@@ -15,7 +16,7 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> with SingleTickerProviderStateMixin {
-  // Data
+  // --- DATA DUMMY GRAFIK ---
   final List<_MonthlyStat> _monthlyStats = const [
     _MonthlyStat('Jan', 1.0), _MonthlyStat('Feb', 3.0), _MonthlyStat('Mar', 4.0),
     _MonthlyStat('Apr', 3.0), _MonthlyStat('May', 2.0), _MonthlyStat('Jun', 5.0),
@@ -23,7 +24,6 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     _MonthlyStat('Oct', 3.0), _MonthlyStat('Nov', 2.0), _MonthlyStat('Dec', 5.0),
   ];
 
-  // Perhatikan tipe data PieChartData diambil dari dashboard_charts.dart
   final List<PieChartData> _pieChartData = const [
     PieChartData('Dikirim', 40, Color(0xFF52C7A0)),
     PieChartData('Dibaca', 30, Color(0xFFFFC857)),
@@ -34,7 +34,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
   late final List<int> _chartYears;
   late int _selectedChartYear;
 
-  // Mascot
+  // Mascot Animation
   double _mascotHeight = 200;
   double _mascotOffsetX = -50;
   double _mascotOffsetY = 130;
@@ -48,12 +48,28 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
+    // Kita gunakan Consumer jika butuh trigger rebuild, 
+    // tapi datanya kita ambil langsung dari Firebase biar akurat.
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
-        final user = userProvider.user;
-        final displayName = (user?.displayName?.contains('@') ?? false
-                ? user?.displayName?.split('@').first
-                : user?.displayName) ?? 'User';
+        
+        // --- LOGIKA UTAMA: AMBIL NAMA ---
+        final user = FirebaseAuth.instance.currentUser;
+        
+        String displayName = "Pengguna"; // Nama default jika kosong
+
+        if (user != null) {
+          if (user.displayName != null && user.displayName!.isNotEmpty) {
+            // 1. Prioritas Utama: Nama Asli (Display Name)
+            displayName = user.displayName!;
+          } else if (user.email != null && user.email!.isNotEmpty) {
+            // 2. Cadangan: Ambil dari Email (sebelum tanda @)
+            // Contoh: budi@gmail.com -> Jadi "budi"
+            displayName = user.email!.split('@')[0];
+          }
+        }
+        // --------------------------------
+
         final topPadding = MediaQuery.of(context).padding.top;
 
         return Container(
@@ -61,7 +77,9 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
           child: SingleChildScrollView(
             child: Column(
               children: [
+                // Kirim nama yang sudah didapat ke Header
                 _buildHeroBanner(displayName, topPadding),
+                
                 Transform.translate(
                   offset: const Offset(0, -80),
                   child: _buildHomeOverviewCard(),
@@ -75,6 +93,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     );
   }
 
+  // Header Hijau
   Widget _buildHeroBanner(String displayName, double topPadding) {
     return Container(
       width: double.infinity,
@@ -100,7 +119,11 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
                     style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.4, fontWeight: FontWeight.w600),
                     children: [
                       const TextSpan(text: 'Selamat datang, '),
-                      TextSpan(text: displayName, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFD447))),
+                      // Tampilkan Nama User di sini
+                      TextSpan(
+                        text: displayName, 
+                        style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFD447))
+                      ),
                       const TextSpan(text: '\nJoyin siap nemenin bisnismu.'),
                     ],
                   ),
@@ -121,8 +144,12 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
                   }),
                   child: Transform.translate(
                     offset: Offset(_mascotOffsetX, _mascotOffsetY),
-                    child: Image.asset('assets/images/maskot_kiri.png', height: _mascotHeight, fit: BoxFit.contain,
-                        errorBuilder: (c, o, s) => const Icon(Icons.image_not_supported, color: Colors.white, size: 50)),
+                    child: Image.asset(
+                      'assets/images/maskot_kiri.png', 
+                      height: _mascotHeight, 
+                      fit: BoxFit.contain,
+                      errorBuilder: (c, o, s) => const Icon(Icons.image_not_supported, color: Colors.white, size: 50)
+                    ),
                   ),
                 ),
               ),
@@ -133,6 +160,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     );
   }
 
+  // Kartu Statistik Putih
   Widget _buildHomeOverviewCard() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -153,17 +181,15 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
           const SizedBox(height: 8),
           _buildMessageLegend(),
           const SizedBox(height: 16),
-          // MENGGUNAKAN FUNGSI ASLI
           _buildMessageVolumeChart(),
           const SizedBox(height: 24),
-          // MENGGUNAKAN FUNGSI ASLI
           _buildMessageStatusChart(),
         ],
       ),
     );
   }
 
-  // ... (Fungsi Stat Row & Legend SAMA SEPERTI SEBELUMNYA) ...
+  // Baris Statistik Angka (0 Chat Bulanan)
   Widget _buildChatStatRow() {
     final stats = [
       _ChatStatCardData(value: '0', label: 'Chat Bulanan', accent: const Color(0xFF63D1BE), background: const Color(0xFFE9FFF8)),
@@ -189,7 +215,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     return Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))), const SizedBox(width: 6), Text(label, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF4A4A4A)))]);
   }
 
-  // === KEMBALIKAN LOGIC GRAFIK DISINI ===
+  // Grafik Batang (Bar Chart)
   Widget _buildMessageVolumeChart() {
     final stats = _monthlyStats;
     final double maxValue = stats.map((stat) => stat.value).reduce((a, b) => a > b ? a : b);
@@ -198,7 +224,6 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
 
     return Column(
       children: [
-        // Dropdown Tahun
         Align(
           alignment: Alignment.centerRight,
           child: Container(
@@ -225,14 +250,12 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
               const double labelSpace = 36;
               return CustomPaint(
                 size: Size(constraints.maxWidth, constraints.maxHeight),
-                painter: ChartGridPainter( // Panggil Painter
+                painter: ChartGridPainter(
                   maxValue: chartTopValue,
                   averageValue: average,
                   labelSpace: labelSpace,
                   leftPadding: 30,
                 ),
-                // (Logic anak-anak bar chart bisa ditambahkan di sini, 
-                //  tapi Painter di atas sudah menggambar grid dasarnya)
               );
             },
           ),
@@ -241,12 +264,13 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     );
   }
 
+  // Grafik Lingkaran (Pie Chart)
   Widget _buildMessageStatusChart() {
     final double totalValue = _pieChartData.fold(0, (sum, item) => sum + item.value);
     return SizedBox(
       height: 160,
       child: CustomPaint(
-        painter: PieChartPainter(data: _pieChartData), // Panggil Painter
+        painter: PieChartPainter(data: _pieChartData),
         child: Center(
           child: Text('${totalValue.toInt()}%', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700)),
         ),

@@ -6,9 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
 // --- IMPORT CONFIG & PAGES ---
 import 'package:joyin/firebase_options.dart';
-import 'package:joyin/onboarding/onboarding_page.dart'; // Pastikan path ini benar
+import 'package:joyin/onboarding/onboarding_page.dart'; 
 import 'package:joyin/dashboard/dashboard_page.dart';
-import 'package:joyin/auth/login_page.dart';
+// import 'package:joyin/auth/login_page.dart'; // Tidak wajib di main, karena dipanggil dari Onboarding
 import 'package:joyin/gen_l10n/app_localizations.dart';
 
 // --- IMPORT PROVIDERS ---
@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             
             theme: ThemeData(
-              primarySwatch: Colors.teal, // Sesuaikan dengan warna Joyin
+              primarySwatch: Colors.teal, 
               useMaterial3: true,
             ),
             
@@ -74,9 +74,7 @@ class MyApp extends StatelessWidget {
               Locale('id'),
             ],
             
-            // === PERBAIKAN UTAMA DI SINI ===
-            // Kita gunakan AuthWrapper untuk mengecek status login.
-            // TAPI, logika di dalam AuthWrapper juga harus benar.
+            // LOGIC UTAMA: Cek status Auth di sini
             home: const AuthWrapper(),
           );
         },
@@ -85,35 +83,44 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // 1. Sedang Memuat
+        
+        // 1. Sedang Memuat (Checking Auth...)
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // 2. Jika User SUDAH LOGIN -> Masuk Dashboard
+        // 2. Jika User SUDAH LOGIN (Ada Data Auth)
         if (snapshot.hasData) {
-          // PENTING: Update UserProvider di sini agar data user tersedia di seluruh aplikasi
-          // Kita lakukan di post-frame callback agar tidak error saat build
+          final user = snapshot.data!;
+          
+          // --- SOLUSI MASALAH 1 (PERSIAPAN) ---
+          // Kita memanggil fungsi untuk load data profil user dari Firestore
+          // agar saat Dashboard terbuka, nama/email sudah ada.
           WidgetsBinding.instance.addPostFrameCallback((_) {
-             // Simpan data user ke provider agar Drawer bisa baca
-             // Pastikan UserProvider punya method setUserFromFirebase
-             // Jika belum ada, buat dulu di file user_provider.dart
-             // Provider.of<UserProvider>(context, listen: false).setUserFromFirebase(snapshot.data!);
+             // Pastikan di UserProvider kamu sudah ada fungsi loadUserData
+             // Provider.of<UserProvider>(context, listen: false).loadUserData(user.uid);
           });
+
           return const DashboardPage();
         }
 
         // 3. Jika User BELUM LOGIN -> Masuk Onboarding
+        // Pastikan di dalam OnboardingPage ada tombol menuju Login/Register
         return const OnboardingPage();
       },
     );
