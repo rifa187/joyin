@@ -1,353 +1,605 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-
-// Pastikan import ini sesuai dengan struktur folder Anda
+import 'package:intl/intl.dart';
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/providers/user_provider.dart';
-import 'package:joyin/screens/pilih_paket_screen.dart';
-import '../core/user_model.dart';
-import 'package:joyin/package/package_info.dart';
+import 'package:joyin/widgets/locked_feature_widget.dart';
+import 'package:provider/provider.dart';
+import 'package_theme.dart';
+import '../screens/pilih_paket_screen.dart';
 
 class PackageStatusPage extends StatelessWidget {
   const PackageStatusPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final packageProvider = Provider.of<PackageProvider>(context);
-    final userProvider = Provider.of<UserProvider>(context);
-    final user = userProvider.user;
+    final packageProvider = context.watch<PackageProvider>();
+    final bool hasPackage = packageProvider.currentUserPackage != null &&
+        packageProvider.currentUserPackage!.isNotEmpty;
+    final selectedName = packageProvider.currentUserPackage;
+    final selectedDuration = selectedName != null
+        ? packageProvider.selectedDurations[selectedName] ?? 1
+        : 1;
+    final selectedPackage = selectedName == null
+        ? null
+        : packageProvider.packages.firstWhere(
+            (p) => p.name == selectedName,
+            orElse: () => packageProvider.packages.first,
+          );
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100], 
-      body: Stack(
+    final PackageTheme theme = PackageThemeResolver.resolve(selectedPackage?.name);
+    final Color accentColor = theme.accent;
+
+    final now = DateTime.now();
+    final dueDate = now.add(Duration(days: 30 * selectedDuration));
+    final int daysLeft = dueDate.difference(now).inDays.clamp(0, 3650);
+    final int totalDays = (30 * selectedDuration).clamp(1, 3650);
+    final double progress = (daysLeft / totalDays).clamp(0, 1);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: theme.headerGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: hasPackage
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildHeader(selectedPackage?.name ?? 'Paket Aktif', theme, daysLeft, selectedDuration, dueDate, progress, accentColor, context),
+                      const SizedBox(height: 12),
+                      _buildPackageActions(context, accentColor),
+                      const SizedBox(height: 18),
+                      _buildFeatureSection(selectedPackage?.features ?? [], accentColor),
+                    ],
+                  ),
+                )
+              : _PrePurchasePackageView(accentColor: accentColor, theme: theme),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    String packageName,
+    PackageTheme theme,
+    int daysLeft,
+    int durationMonths,
+    DateTime dueDate,
+    double progress,
+    Color accentColor,
+    BuildContext context,
+  ) {
+    final dateFormatter = DateFormat('d MMMM yyyy', 'id_ID');
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: theme.headerGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: theme.headerGradient.last.withValues(alpha: 0.22),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // === LAYER 1: Header Gradien Hijau ===
-          Container(
-            height: 200,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF4DB6AC), Color(0xFF81C784)],
-              ),
-            ),
-          ),
-
-          // === LAYER 2: Judul Halaman ===
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AppBar(
-              title: Text(
-                "Paket Saya",
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              centerTitle: true,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              automaticallyImplyLeading: false, 
-            ),
-          ),
-
-          // === LAYER 3: Container Putih ===
-          Container(
-            margin: const EdgeInsets.only(top: 100),
-            height: MediaQuery.of(context).size.height - 100,
-            decoration: const BoxDecoration(
+          Text(
+            'Paket $packageName',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
               color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Atur dan cek status paket langganan Anda',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 640;
+              final pillWidth = isWide ? (constraints.maxWidth - 20) / 3 : constraints.maxWidth;
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  SizedBox(
+                    width: pillWidth,
+                    child: _StatPill(
+                      label: 'Durasi Langganan',
+                      value: '$durationMonths Bulan',
+                      accent: accentColor,
+                    ),
+                  ),
+                  SizedBox(
+                    width: pillWidth,
+                    child: _StatPill(
+                      label: 'Masa Aktif',
+                      value: '$daysLeft Hari Lagi',
+                      accent: accentColor,
+                      progress: progress,
+                    ),
+                  ),
+                  SizedBox(
+                    width: pillWidth,
+                    child: _StatPill(
+                      label: 'Jatuh Tempo',
+                      value: dateFormatter.format(dueDate),
+                      accent: accentColor,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 18),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageActions(BuildContext context, Color accentColor) {
+    final buttonTextStyle = GoogleFonts.poppins(
+      fontSize: 13,
+      fontWeight: FontWeight.w700,
+    );
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12,
+      runSpacing: 10,
+      children: [
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PilihPaketScreen()));
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: accentColor,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
+          ),
+          child: Text('Perpanjang Paket', style: buttonTextStyle),
+        ),
+        OutlinedButton(
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PilihPaketScreen()));
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: const BorderSide(color: Colors.white, width: 1.2),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('Upgrade Paket', style: buttonTextStyle.copyWith(color: Colors.white)),
+        ),
+        OutlinedButton(
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Permintaan pembatalan paket terkirim.')),
+            );
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text('Batalkan Paket', style: buttonTextStyle.copyWith(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeatureSection(List<String> features, Color accentColor) {
+    final icons = <IconData>[
+      Icons.chat_bubble_outline,
+      Icons.rule_folder_outlined,
+      Icons.access_time,
+      Icons.query_stats_outlined,
+      Icons.integration_instructions_outlined,
+      Icons.help_outline,
+      Icons.auto_graph,
+      Icons.security_update_good_outlined,
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Fitur yang Didapatkan',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 640;
+              final double cardWidth = isWide ? (constraints.maxWidth - 12) / 2 : constraints.maxWidth;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: features.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final text = entry.value;
+                  final icon = icons[index % icons.length];
+                  return SizedBox(
+                    width: cardWidth,
+                    child: _FeatureCard(
+                      icon: icon,
+                      title: text.split(' ').take(3).join(' '),
+                      description: text,
+                      accent: accentColor,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  final String label;
+  final String value;
+  final double? progress;
+  final Color accent;
+
+  const _StatPill({
+    required this.label,
+    required this.value,
+    required this.accent,
+    this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          if (progress != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: LinearProgressIndicator(
+                value: progress!.clamp(0, 1),
+                minHeight: 6,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(30),
-                topRight: Radius.circular(30),
-              ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Color accent;
+
+  const _FeatureCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrePurchasePackageView extends StatelessWidget {
+  final Color accentColor;
+  final PackageTheme theme;
+
+  const _PrePurchasePackageView({
+    required this.accentColor,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: theme.headerGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [accentColor, theme.headerGradient.last],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withValues(alpha: 0.26),
+                      blurRadius: 20,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (user != null && user.hasPurchasedPackage)
-                      _buildPackageDetails(context, user, packageProvider)
-                    else
-                      _buildNoPackage(context, user),
-                      
-                    const SizedBox(height: 50),
+                    Text(
+                      'Mulai dengan Paket Joyin',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pilih paket yang cocok untuk bisnis kamu dan nikmati balasan otomatis, bot cerdas, serta laporan yang siap pakai.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: Colors.white.withValues(alpha: 0.92),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: accentColor,
+                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+                        );
+                      },
+                      child: Text(
+                        'Lihat Pilihan Paket',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // === WIDGET: Tampilan Jika BELUM Punya Paket ===
-  Widget _buildNoPackage(BuildContext context, User? user) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const SizedBox(height: 40),
-        Icon(
-          Icons.sentiment_dissatisfied_rounded,
-          size: 100,
-          color: Colors.grey[400],
-        ),
-        const SizedBox(height: 24),
-        
-        Text(
-          'Ups, kamu belum punya paket nih',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 12),
-        
-        Text(
-          'Yuk pilih paket dulu biar bisa lanjut menikmati semua fitur chatbot dan bikin bisnismu makin lancar.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(
-            fontSize: 14, 
-            color: Colors.grey,
-            height: 1.5,
+              const SizedBox(height: 18),
+              _PrePurchaseCard(
+                title: 'Kenapa harus upgrade?',
+                items: const [
+                  'Balas otomatis 24/7 tanpa kehilangan sentuhan personal.',
+                  'Bot siap pakai untuk alur chat, FAQ, dan broadcast.',
+                  'Laporan ringkas untuk pantau performa tim dan pesan.',
+                ],
+                accent: accentColor,
+              ),
+              const SizedBox(height: 14),
+              _PrePurchaseCard(
+                title: 'Yang kamu dapatkan',
+                items: const [
+                  'Template respon dan quick reply.',
+                  'Integrasi multi-channel dan multi-user.',
+                  'Prioritas dukungan serta pembaruan fitur.',
+                ],
+                accent: accentColor,
+              ),
+              const SizedBox(height: 18),
+              const LockedFeatureWidget(
+                title: 'Paket Terkunci',
+                message: 'Upgrade paketmu untuk mengaktifkan fitur paket dan statistik.',
+                icon: Icons.inventory_2_outlined,
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 40),
-        
-        _buildUpgradeButton(context, user),
       ],
     );
   }
+}
 
-  // === WIDGET: Tampilan Jika SUDAH Punya Paket ===
-  Widget _buildPackageDetails(
-    BuildContext context,
-    User user,
-    PackageProvider packageProvider,
-  ) {
-    // FIX PENTING: Cek jika list kosong, return widget kosong biar gak error
-    if (packageProvider.packages.isEmpty) {
-      return const SizedBox(); 
-    }
+class _PrePurchaseCard extends StatelessWidget {
+  final String title;
+  final List<String> items;
+  final Color accent;
 
-    // Ambil paket user atau fallback ke paket pertama (aman karena sudah dicek tidak kosong)
-    final selectedPackageInfo = packageProvider.packages.firstWhere(
-      (pkg) => pkg.name == packageProvider.currentUserPackage,
-      orElse: () => packageProvider.packages.first,
-    );
+  const _PrePurchaseCard({
+    required this.title,
+    required this.items,
+    required this.accent,
+  });
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 10),
-        _buildSectionTitle('Paket Anda Saat Ini', Icons.workspace_premium),
-        const SizedBox(height: 20),
-        _buildCurrentPackageCard(
-          user,
-          selectedPackageInfo,
-          packageProvider.currentUserPackage,
-        ),
-        const SizedBox(height: 30),
-        _buildUpgradeButton(context, user),
-      ],
-    );
-  }
-
-  Widget _buildCurrentPackageCard(
-    User user,
-    PackageInfo selectedPackageInfo,
-    String? currentPackage,
-  ) {
-    const outlineGradient = LinearGradient(
-      colors: [Color(0xFFFFF304), Color(0xFFF09EF1)], 
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-    );
-    final packageGradient = const LinearGradient(
-      colors: [Color(0xFF63D1BE), Color(0xFF88E285)], 
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-    );
-
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(2.5), 
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
-        gradient: outlineGradient,
-        borderRadius: BorderRadius.circular(26.0),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF09EF1).withOpacity(0.5),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20.0),
-              decoration: BoxDecoration(gradient: packageGradient),
-              child: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Paket ${currentPackage ?? 'Tidak Ada'}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check,
+                      size: 14,
+                      color: accent,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  if (user.packageDurationMonths != null && user.packageDurationMonths! > 0)
-                    Text(
-                      'Durasi: ${user.packageDurationMonths} Bulan',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                  const SizedBox(width: 10),
+                  Expanded(
                     child: Text(
-                      'Status: Aktif',
+                      item,
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        fontSize: 12.5,
+                        height: 1.45,
+                        color: Colors.grey[800],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            Container(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Keuntungan Paket:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    ...selectedPackageInfo.features.map(
-                      (feature) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              color: Color(0xFF56AB2F),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                feature,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13.5,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (user.packageDurationMonths != null && user.packageDurationMonths! > 0)
-                      Text(
-                        '* Paket aktif selama ${user.packageDurationMonths} bulan.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildUpgradeButton(BuildContext context, User? user) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: () {
-          if (user != null) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const PilihPaketScreen()),
-            );
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4DB6AC), 
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-          elevation: 3,
-          shadowColor: const Color(0xFF4DB6AC).withOpacity(0.4),
-        ),
-        child: Text(
-          'Upgrade Paket',
-          style: GoogleFonts.poppins(
-            fontSize: 16, 
-            fontWeight: FontWeight.bold
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: const Color(0xFF4DB6AC), size: 24),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-      ],
     );
   }
 }

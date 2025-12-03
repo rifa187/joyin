@@ -1,13 +1,14 @@
 class User {
   final String uid;
   final String email;
-  final String name; // Diubah dari displayName agar sesuai dengan error log
+  final String name;
   final String? photoUrl;
   final String? dateOfBirth;
   final String? phoneNumber;
   final bool hasPurchasedPackage;
   final int? packageDurationMonths;
-  final DateTime? createdAt; // Ditambahkan agar support penyimpanan tanggal buat akun
+  final DateTime? createdAt;
+  final String role; // PENTING: Untuk membedakan 'admin' dan 'user'
 
   User({
     required this.uid,
@@ -19,27 +20,37 @@ class User {
     this.hasPurchasedPackage = false,
     this.packageDurationMonths,
     this.createdAt,
+    this.role = 'user', // Default role adalah 'user'
   });
 
-  // --- 1. FACTORY FROM JSON (Untuk Membaca dari Firestore) ---
+  // --- 1. FACTORY FROM JSON (Membaca dari Firestore) ---
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       uid: json['uid'] ?? '',
       email: json['email'] ?? '',
-      // Cek 'name', kalau kosong cek 'displayName', kalau kosong pakai 'No Name'
+      
+      // FALLBACK CERDAS: Cek 'name' dulu, kalau kosong cek 'displayName' (punya temanmu)
       name: json['name'] ?? json['displayName'] ?? 'No Name', 
+      
       photoUrl: json['photoUrl'],
       dateOfBirth: json['dateOfBirth'],
-      phoneNumber: json['phoneNumber'],
+      
+      // FALLBACK CERDAS: Cek 'phoneNumber' dulu, kalau kosong cek 'phone' (punya temanmu)
+      phoneNumber: json['phoneNumber'] ?? json['phone'], 
+      
       hasPurchasedPackage: json['hasPurchasedPackage'] ?? false,
       packageDurationMonths: json['packageDurationMonths'],
+      
       createdAt: json['createdAt'] != null 
-          ? DateTime.tryParse(json['createdAt']) 
+          ? DateTime.tryParse(json['createdAt'].toString()) 
           : null,
+          
+      // Baca role dari database, jika tidak ada anggap 'user'
+      role: json['role'] ?? 'user', 
     );
   }
 
-  // --- 2. METHOD TO JSON (Untuk Menyimpan ke Firestore) ---
+  // --- 2. METHOD TO JSON (Menyimpan ke Firestore) ---
   Map<String, dynamic> toJson() {
     return {
       'uid': uid,
@@ -47,14 +58,15 @@ class User {
       'name': name,
       'photoUrl': photoUrl,
       'dateOfBirth': dateOfBirth,
-      'phoneNumber': phoneNumber,
+      'phoneNumber': phoneNumber, // Kita standarkan pakai 'phoneNumber'
       'hasPurchasedPackage': hasPurchasedPackage,
       'packageDurationMonths': packageDurationMonths,
       'createdAt': createdAt?.toIso8601String(),
+      'role': role, // Simpan role ke database
     };
   }
 
-  // --- 3. COPY WITH (Untuk Update State Local) ---
+  // --- 3. COPY WITH (Update State) ---
   User copyWith({
     String? name,
     String? email,
@@ -63,6 +75,7 @@ class User {
     String? photoUrl,
     bool? hasPurchasedPackage,
     int? packageDurationMonths,
+    String? role,
   }) {
     return User(
       uid: uid,
@@ -72,9 +85,9 @@ class User {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       photoUrl: photoUrl ?? this.photoUrl,
       hasPurchasedPackage: hasPurchasedPackage ?? this.hasPurchasedPackage,
-      packageDurationMonths:
-          packageDurationMonths ?? this.packageDurationMonths,
+      packageDurationMonths: packageDurationMonths ?? this.packageDurationMonths,
       createdAt: createdAt,
+      role: role ?? this.role,
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider; // Hide agar tidak bentrok
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 
 // IMPORT FILE KAMU
 import '../../core/app_colors.dart';
@@ -10,7 +10,12 @@ import '../../providers/auth_provider.dart';
 import '../profile/widgets/profile_avatar.dart'; 
 import '../profile/edit_profile_page.dart'; 
 import '../profile/settings_page.dart'; 
-import '../../auth/login_page.dart'; 
+import '../../auth/login_page.dart';
+
+// IMPORT HALAMAN LAIN
+import 'about_page.dart'; 
+// Pastikan path ini benar. Jika merah, ganti path sesuai lokasi admin_orders_page.dart kamu
+import '../../admin/admin_orders_page.dart'; 
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -30,13 +35,8 @@ class ProfilePage extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              
-              // Logout Provider
-              // PERBAIKAN: Hapus 'await' jika method logout() di AuthProvider bertipe void
+              Navigator.pop(context);
               Provider.of<AuthProvider>(context, listen: false).logout();
-
-              // Kembali ke Login Page (Cek mounted agar aman)
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -53,57 +53,41 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Kita panggil refreshUser sekali saat build untuk memastikan data paling baru
-    // (Opsional, tapi bagus agar data selalu sinkron)
+    // Memaksa refresh data saat halaman dibuka agar role terbaru terbaca
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<UserProvider>(context, listen: false).refreshUser();
     });
 
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
-        // --- LOGIKA MENAMPILKAN DATA USER (PRIORITAS FIRESTORE) ---
-        
-        // 1. Ambil data dari UserProvider (Data Firestore yang lengkap)
+        // --- LOGIKA DATA USER ---
         final firestoreUser = userProvider.user;
-        
-        // 2. Ambil data dari Firebase Auth (Cadangan/Fallback)
         final authUser = FirebaseAuth.instance.currentUser;
 
-        // Default Values
         String displayName = "Pengguna Baru"; 
         String emailDisplay = "Belum ada email";
         String? displayPhoto;
 
-        // LOGIKA PEMILIHAN DATA:
-        // Prioritaskan data dari Firestore (karena ada nama, no hp, dll).
-        // Jika Firestore kosong (null), baru ambil dari Auth.
-
         if (firestoreUser != null) {
-          // --- SKENARIO A: DATA FIRESTORE ADA (Sudah Register/OTP Sukses) ---
-          displayName = firestoreUser.name; // Mengambil dari field 'name' di user_model.dart
+          displayName = firestoreUser.name; 
           emailDisplay = firestoreUser.email;
           displayPhoto = firestoreUser.photoUrl;
         } else if (authUser != null) {
-          // --- SKENARIO B: DATA FIRESTORE BELUM LOAD (Pakai data Auth sementara) ---
           emailDisplay = authUser.email ?? emailDisplay;
-          
           if (authUser.displayName != null && authUser.displayName!.isNotEmpty) {
             displayName = authUser.displayName!;
           } else {
              displayName = emailDisplay.split('@')[0];
           }
-          
-          // PERBAIKAN: Firebase Auth menggunakan .photoURL (bukan photoUrl)
           displayPhoto = authUser.photoURL; 
         }
-        // -------------------------------------
 
         return Scaffold(
           backgroundColor: const Color(0xFFF0F2F5),
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // HEADER
+                // HEADER HIJAU
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
@@ -126,7 +110,6 @@ class ProfilePage extends StatelessWidget {
                       Row(
                         children: [
                           ProfileAvatar(
-                            // Menggunakan variabel yang sudah dinormalisasi di atas
                             photoUrl: displayPhoto, 
                             isLoading: false,
                             onEditTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())), 
@@ -137,7 +120,7 @@ class ProfilePage extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  displayName, // DATA NAMA SEKARANG PASTI TAMPIL
+                                  displayName,
                                   style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -146,6 +129,20 @@ class ProfilePage extends StatelessWidget {
                                   style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.9), fontSize: 14),
                                   overflow: TextOverflow.ellipsis,
                                 ),
+                                // Label Admin (Kecil)
+                                if (firestoreUser?.role == 'admin')
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 5),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4)
+                                    ),
+                                    child: Text(
+                                      "ADMINISTRATOR",
+                                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  )
                               ],
                             ),
                           ),
@@ -157,7 +154,7 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // MENU LIST
+                // DAFTAR MENU
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Card(
@@ -165,15 +162,52 @@ class ProfilePage extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Column(
                       children: [
-                        _buildMenuItem(context, icon: Icons.person_outline, text: 'Edit Profil', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage()))),
+                        
+                        // 🔥 LOGIKA TOMBOL ADMIN (INI YANG PENTING) 🔥
+                        if (firestoreUser?.role == 'admin') ...[
+                           _buildMenuItem(
+                            context, 
+                            icon: Icons.admin_panel_settings, // Icon Admin
+                            text: 'Dashboard Admin', 
+                            // Pastikan import admin_orders_page.dart benar di atas
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminOrdersPage())),
+                          ),
+                          const Divider(height: 1),
+                        ],
+                        // ------------------------------------------
+
+                        _buildMenuItem(
+                          context, 
+                          icon: Icons.person_outline, 
+                          text: 'Edit Profil', 
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage()))
+                        ),
                         const Divider(height: 1),
-                        _buildMenuItem(context, icon: Icons.settings_outlined, text: 'Pengaturan', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))),
+                        _buildMenuItem(
+                          context, 
+                          icon: Icons.settings_outlined, 
+                          text: 'Pengaturan', 
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))
+                        ),
                         const Divider(height: 1),
                         _buildMenuItem(context, icon: Icons.help_outline, text: 'Bantuan', onTap: () {}),
                         const Divider(height: 1),
-                        _buildMenuItem(context, icon: Icons.info_outline, text: 'Tentang Aplikasi', onTap: () {}),
+                        
+                        _buildMenuItem(
+                          context, 
+                          icon: Icons.info_outline, 
+                          text: 'Tentang Aplikasi', 
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage()))
+                        ),
+                        
                         const Divider(height: 1),
-                        _buildMenuItem(context, icon: Icons.logout, text: 'Keluar', isDestructive: true, onTap: () => _handleLogout(context)),
+                        _buildMenuItem(
+                          context, 
+                          icon: Icons.logout, 
+                          text: 'Keluar', 
+                          isDestructive: true, 
+                          onTap: () => _handleLogout(context)
+                        ),
                       ],
                     ),
                   ),
