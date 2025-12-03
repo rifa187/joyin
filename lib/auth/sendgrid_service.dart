@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart'; // Untuk debugPrint yang lebih rapi
 class SendGridService {
   // --- KONFIGURASI ---
   // Pastikan API Key ini memiliki akses "Mail Send" (Full Access)
-  final String _apiKey = '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'; 
+  final String _apiKey = ''; 
   
   // Email ini WAJIB berstatus VERIFIED di SendGrid (Sender Authentication)
   final String _senderEmail = 'bejoyinin@gmail.com'; 
