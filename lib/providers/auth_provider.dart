@@ -262,6 +262,7 @@ class AuthProvider with ChangeNotifier {
         hasPurchasedPackage: userData['hasPurchasedPackage'] ?? false,
         photoUrl: userData['photoUrl'],
         dateOfBirth: userData['dateOfBirth'], 
+        isAdmin: userData['role'] == 'admin' || userData['isAdmin'] == true,
       );
 
       if (!context.mounted) return;

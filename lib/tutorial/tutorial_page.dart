@@ -12,6 +12,7 @@ class TutorialPage extends StatefulWidget {
 
 class _TutorialPageState extends State<TutorialPage> {
   final TextEditingController _searchController = TextEditingController();
+
   final List<_TutorialItem> _tutorials = const [
     _TutorialItem(
       title: 'Cara Membuat Chatbot Pertama Kamu',
@@ -85,7 +86,6 @@ class _TutorialPageState extends State<TutorialPage> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -124,62 +124,46 @@ class _TutorialPageState extends State<TutorialPage> {
             ),
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
           ),
-          child: Stack(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Positioned(
-                top: 6,
-                left: 6,
-                child: Image.asset(
-                  'assets/images/Bintang.png',
-                  height: 26,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-              Positioned(
-                top: 32,
-                right: 32,
-                child: Image.asset(
-                  'assets/images/bintang2.png',
-                  height: 18,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(left: isNarrow ? 0 : 0, right: isNarrow ? 0 : 0),
-                child: isNarrow
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _HeroBadge(),
-                          const SizedBox(height: 12),
-                          _HeroTextBlock(),
-                          const SizedBox(height: 14),
-                          Center(
-                            child: Image.asset(
-                              'assets/images/joy-stetoskop.png',
-                              height: 120,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Expanded(child: _HeroTextBlock(withBadge: true)),
-                          const SizedBox(width: 12),
-                          Flexible(
-                            child: Image.asset(
-                              'assets/images/joy-stetoskop.png',
-                              height: 140,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                            ),
-                          ),
-                        ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HeroBadge(),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Belajar Joyin lebih praktis',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pelajari cara membuat chatbot, integrasi platform, sampai optimasi kampanye. Panduan singkat supaya kamu langsung praktik.',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontSize: 13,
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              if (!isNarrow) ...[
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Image.asset(
+                    'assets/images/joy-stetoskop.png',
+                    height: 120,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -194,7 +178,7 @@ class _TutorialPageState extends State<TutorialPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -225,7 +209,7 @@ class _TutorialPageState extends State<TutorialPage> {
         final double spacing = 12;
         final double cardWidth = isWide
             ? (constraints.maxWidth - spacing) / 2
-            : (constraints.maxWidth - (spacing * 0.5));
+            : constraints.maxWidth;
 
         return Wrap(
           spacing: spacing,
@@ -287,9 +271,9 @@ class _HeroBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.22),
+        color: Colors.white.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.28)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -315,42 +299,6 @@ class _HeroBadge extends StatelessWidget {
   }
 }
 
-class _HeroTextBlock extends StatelessWidget {
-  final bool withBadge;
-
-  const _HeroTextBlock({this.withBadge = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (withBadge) ...[
-          _HeroBadge(),
-          const SizedBox(height: 12),
-        ],
-        Text(
-          'Belajar Joyin lebih praktis',
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Pelajari cara membuat chatbot, integrasi platform, sampai optimasi kampanye. Panduan singkat supaya kamu langsung praktik.',
-          style: GoogleFonts.poppins(
-            color: Colors.white.withOpacity(0.92),
-            fontSize: 13,
-            height: 1.6,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _TutorialCard extends StatelessWidget {
   final _TutorialItem item;
 
@@ -365,7 +313,7 @@ class _TutorialCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 18,
             offset: const Offset(0, 12),
           ),
@@ -390,15 +338,19 @@ class _TutorialCard extends StatelessWidget {
             children: [
               const Icon(Icons.event_note_outlined, size: 14, color: AppColors.textSecondary),
               const SizedBox(width: 6),
-              Text(
-                item.date,
-                style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
+              Expanded(
+                child: Text(
+                  item.date,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(fontSize: 12, color: AppColors.textSecondary),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.joyin.withOpacity(0.12),
+                  color: AppColors.joyin.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -424,7 +376,7 @@ class _TutorialCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Lihat →',
+            'Lihat detail',
             style: GoogleFonts.poppins(
               color: AppColors.secondary,
               fontWeight: FontWeight.w700,

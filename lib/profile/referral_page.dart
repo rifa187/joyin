@@ -102,7 +102,7 @@ class _ReferralPageState extends State<ReferralPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -124,13 +124,6 @@ class _ReferralPageState extends State<ReferralPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'Setiap teman yang berlangganan lewat kode kamu menambah kuota broadcast dan saldo poin Joyin.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
               ],
             ),
           ),
@@ -138,7 +131,7 @@ class _ReferralPageState extends State<ReferralPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.joyin.withOpacity(0.1),
+              color: AppColors.joyin.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(Icons.card_giftcard, color: AppColors.joyin, size: 28),
@@ -161,7 +154,7 @@ class _ReferralPageState extends State<ReferralPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.grad1.withOpacity(0.2),
+            color: AppColors.grad1.withValues(alpha: 0.2),
             blurRadius: 26,
             offset: const Offset(0, 12),
           ),
@@ -175,7 +168,7 @@ class _ReferralPageState extends State<ReferralPage> {
               Text(
                 'Kode Referral Kamu',
                 style: GoogleFonts.poppins(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -184,13 +177,13 @@ class _ReferralPageState extends State<ReferralPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
+                  color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.star_rounded, color: Colors.white.withOpacity(0.9), size: 18),
+                    Icon(Icons.star_rounded, color: Colors.white.withValues(alpha: 0.9), size: 18),
                     const SizedBox(width: 6),
                     Text(
                       'Bonus aktif',
@@ -206,6 +199,23 @@ class _ReferralPageState extends State<ReferralPage> {
             ],
           ),
           const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              'Setiap 20 orang pakai kode kamu -> diskon 6% untukmu',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -234,7 +244,7 @@ class _ReferralPageState extends State<ReferralPage> {
                   _buildPrimaryButton(
                     label: 'Bagikan',
                     icon: Icons.share_outlined,
-                    backgroundColor: Colors.white.withOpacity(0.15),
+                    backgroundColor: Colors.white.withValues(alpha: 0.15),
                     foregroundColor: Colors.white,
                     onTap: () => _copyCode(referralCode),
                   ),
@@ -243,10 +253,6 @@ class _ReferralPageState extends State<ReferralPage> {
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            'Setiap pengguna baru yang mendaftar dengan kode ini memberi kamu +300 kuota broadcast & diskon 10% untuk upgrade paket berikutnya.',
-            style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.5),
-          ),
         ],
       ),
     );
@@ -261,7 +267,7 @@ class _ReferralPageState extends State<ReferralPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 12),
           ),
@@ -275,7 +281,7 @@ class _ReferralPageState extends State<ReferralPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.joyin.withOpacity(0.12),
+                  color: AppColors.joyin.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.qr_code_2, color: AppColors.joyin),
@@ -291,13 +297,6 @@ class _ReferralPageState extends State<ReferralPage> {
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
                         color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Aktifkan bonus onboarding biar biaya campaign lebih ringan.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.5,
-                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -388,84 +387,7 @@ class _ReferralPageState extends State<ReferralPage> {
   }
 
   Widget _buildBenefitTiles() {
-    const tiles = <_BenefitTile>[
-      _BenefitTile(
-        icon: Icons.broadcast_on_personal_rounded,
-        title: '+300 kuota broadcast',
-        subtitle: 'Dipakai otomatis untuk campaign WhatsApp atau SMS berikutnya.',
-      ),
-      _BenefitTile(
-        icon: Icons.auto_graph_rounded,
-        title: 'Diskon 10% upgrade paket',
-        subtitle: 'Potongan langsung saat naik ke paket Basic/Pro setelah referral berhasil.',
-      ),
-      _BenefitTile(
-        icon: Icons.support_agent_rounded,
-        title: 'Prioritas support onboarding',
-        subtitle: 'Tim Joyin membantu setting bot dan import kontak lebih cepat.',
-      ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: tiles
-          .map(
-            (tile) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.joyin.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(tile.icon, color: AppColors.joyin),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tile.title,
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14.5,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          tile.subtitle,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12.5,
-                            height: 1.5,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-          .toList(),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildStepChip(String text, IconData icon) {
@@ -593,16 +515,4 @@ class _ReferralPageState extends State<ReferralPage> {
       ),
     );
   }
-}
-
-class _BenefitTile {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  const _BenefitTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
 }

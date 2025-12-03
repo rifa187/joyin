@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 // PROVIDERS & COMPONENTS
 import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
-import '../core/app_colors.dart';
+import 'package:joyin/providers/package_provider.dart';
 import '../widgets/app_drawer.dart';
+import '../package/package_theme.dart';
+import '../admin/admin_orders_page.dart';
 
 // PAGES IMPORT
 import 'home_content.dart';
@@ -48,34 +50,50 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final dashboardProvider = context.watch<DashboardProvider>();
     final user = context.watch<UserProvider>().user;
+    final packageName = context.watch<PackageProvider>().currentUserPackage;
+    final packageTheme = PackageThemeResolver.resolve(packageName);
     final selectedIndex = dashboardProvider.selectedIndex;
 
-    return Scaffold(
-      key: scaffoldKey,
-      
-      // ? UPDATE 1: Tambahkan selectedIndex == 4 agar halaman Paket 
-      // bisa naik ke atas (full screen) seperti Beranda & Profil
-      extendBodyBehindAppBar: selectedIndex == 0 || selectedIndex == 4 || selectedIndex == 5,
-      
-      backgroundColor: const Color(0xFFF0F2F5),
-      
-      appBar: _buildAppBar(selectedIndex),
-      
-      drawer: user == null
-          ? null
-          : AppDrawer(
-              user: user,
-              onEditProfile: () => _navigateToEditProfile(context),
-              onItemTap: (index) {
-                Navigator.of(context).pop();
-                dashboardProvider.setSelectedIndex(index);
-              },
-            ),
-      
-      // Menampilkan Halaman sesuai index
-      body: _pages[selectedIndex],
-      
-      bottomNavigationBar: _buildBottomNavigationBar(context, dashboardProvider),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: packageTheme.backgroundGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Scaffold(
+        key: scaffoldKey,
+        
+        // ? UPDATE 1: Tambahkan selectedIndex == 4 agar halaman Paket 
+        // bisa naik ke atas (full screen) seperti Beranda & Profil
+        extendBodyBehindAppBar: selectedIndex == 0 || selectedIndex == 4 || selectedIndex == 5,
+        
+        backgroundColor: Colors.transparent,
+        
+        appBar: _buildAppBar(selectedIndex),
+        
+        drawer: user == null
+            ? null
+            : AppDrawer(
+                user: user,
+                onEditProfile: () => _navigateToEditProfile(context),
+                onAdminTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdminOrdersPage()),
+                  );
+                },
+                onItemTap: (index) {
+                  Navigator.of(context).pop();
+                  dashboardProvider.setSelectedIndex(index);
+                },
+              ),
+        
+        // Menampilkan Halaman sesuai index
+        body: _pages[selectedIndex],
+        
+        bottomNavigationBar: _buildBottomNavigationBar(context, dashboardProvider, packageTheme),
+      ),
     );
   }
 
@@ -107,15 +125,19 @@ class _DashboardPageState extends State<DashboardPage> {
     return null;
   }
 
-  Widget _buildBottomNavigationBar(BuildContext context, DashboardProvider provider) {
+  Widget _buildBottomNavigationBar(
+    BuildContext context,
+    DashboardProvider provider,
+    PackageTheme packageTheme,
+  ) {
     return BottomNavigationBar(
       items: [
-        _buildNavItem(Icons.home_filled, 'Beranda', 0, provider.selectedIndex),
-        _buildNavItem(Icons.chat_bubble_outline, 'Obrolan', 1, provider.selectedIndex),
-        _buildNavItem(Icons.article_outlined, 'Laporan', 2, provider.selectedIndex),
-        _buildNavItem(Icons.smart_toy_outlined, 'Bot', 3, provider.selectedIndex),
-        _buildNavItem(Icons.inventory_2_outlined, 'Paket', 4, provider.selectedIndex),
-        _buildNavItem(Icons.person_outline, 'Saya', 5, provider.selectedIndex),
+        _buildNavItem(Icons.home_filled, 'Beranda', 0, provider.selectedIndex, packageTheme),
+        _buildNavItem(Icons.chat_bubble_outline, 'Obrolan', 1, provider.selectedIndex, packageTheme),
+        _buildNavItem(Icons.article_outlined, 'Laporan', 2, provider.selectedIndex, packageTheme),
+        _buildNavItem(Icons.smart_toy_outlined, 'Bot', 3, provider.selectedIndex, packageTheme),
+        _buildNavItem(Icons.inventory_2_outlined, 'Paket', 4, provider.selectedIndex, packageTheme),
+        _buildNavItem(Icons.person_outline, 'Saya', 5, provider.selectedIndex, packageTheme),
       ],
       currentIndex: provider.selectedIndex,
       onTap: (index) => provider.setSelectedIndex(index),
@@ -124,21 +146,25 @@ class _DashboardPageState extends State<DashboardPage> {
       showUnselectedLabels: true,
       selectedFontSize: 12,
       unselectedFontSize: 12,
-      // Pastikan AppColors.joyin sudah didefinisikan, atau ganti dengan Color(0xFF4DB6AC)
-      selectedItemColor: AppColors.joyin, 
+      selectedItemColor: packageTheme.accent, 
       unselectedItemColor: Colors.grey[600],
     );
   }
 
-  BottomNavigationBarItem _buildNavItem(IconData icon, String label, int index, int selectedIndex) {
+  BottomNavigationBarItem _buildNavItem(
+    IconData icon,
+    String label,
+    int index,
+    int selectedIndex,
+    PackageTheme packageTheme,
+  ) {
     return BottomNavigationBarItem(
       label: label,
       icon: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 48, height: 32,
         decoration: BoxDecoration(
-          // Pastikan AppColors.joyin sudah didefinisikan
-          color: selectedIndex == index ? AppColors.joyin : Colors.transparent,
+          color: selectedIndex == index ? packageTheme.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Icon(

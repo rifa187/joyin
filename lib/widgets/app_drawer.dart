@@ -10,12 +10,14 @@ class AppDrawer extends StatelessWidget {
   final User? user;
   final VoidCallback onEditProfile;
   final Function(int) onItemTap;
+  final VoidCallback? onAdminTap;
 
   const AppDrawer({
     super.key,
     required this.user,
     required this.onEditProfile,
     required this.onItemTap,
+    this.onAdminTap,
   });
 
   @override
@@ -63,6 +65,18 @@ class AppDrawer extends StatelessWidget {
               index: 3,
               onTap: () => onItemTap(3),
             ),
+            if (user?.isAdmin == true)
+              _buildDrawerItem(
+                context: context,
+                dashboardProvider: dashboardProvider,
+                icon: Icons.admin_panel_settings_outlined,
+                text: 'Admin',
+                index: -1,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onAdminTap?.call();
+                },
+              ),
             _buildDrawerItem(
               context: context, // Pass context
               dashboardProvider: dashboardProvider, // Pass dashboardProvider
