@@ -36,16 +36,16 @@ class PackageThemeResolver {
       accent: const Color(0xFF5FCAAC),
     ),
     'Bisnis': PackageTheme(
-      headerGradient: const [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
-      cardGradient: const [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
-      backgroundGradient: const [Color(0xFFF3EEFF), Color(0xFFE8F7F2)],
-      accent: const Color(0xFF9C64F7),
-    ),
-    'Enterprise': PackageTheme(
       headerGradient: const [Color(0xFF9C63F7), Color(0xFF60C8AC)],
       cardGradient: const [Color(0xFF9C63F7), Color(0xFF60C8AC)],
       backgroundGradient: const [Color(0xFFF2EEFF), Color(0xFFE8F7F3)],
       accent: const Color(0xFF9C63F7),
+    ),
+    'Enterprise': PackageTheme(
+      headerGradient: const [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
+      cardGradient: const [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
+      backgroundGradient: const [Color(0xFFF3EEFF), Color(0xFFE8F7F2)],
+      accent: const Color(0xFF9C64F7),
     ),
   };
 
