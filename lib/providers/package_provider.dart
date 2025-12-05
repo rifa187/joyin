@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../package/package_info.dart';
 
 class PackageProvider with ChangeNotifier {
@@ -88,6 +89,7 @@ class PackageProvider with ChangeNotifier {
 
   final Map<String, int> _selectedDurations = {};
   Map<String, int> get selectedDurations => _selectedDurations;
+  bool _hydrated = false;
 
   void loadCurrentUserPackage(String? package) {
     _currentUserPackage = package;
@@ -97,5 +99,21 @@ class PackageProvider with ChangeNotifier {
   void selectDuration(String packageName, int duration) {
     _selectedDurations[packageName] = duration;
     notifyListeners();
+  }
+
+  /// Load persisted package selection so users aren't asked to buy again after restart.
+  Future<void> hydrateFromPrefs() async {
+    if (_hydrated) return;
+    final prefs = await SharedPreferences.getInstance();
+    final savedPackage = prefs.getString('selected_package');
+    final savedDuration = prefs.getInt('selected_package_duration_months');
+    if (savedPackage != null && savedPackage.isNotEmpty) {
+      _currentUserPackage = savedPackage;
+      if (savedDuration != null) {
+        _selectedDurations[savedPackage] = savedDuration;
+      }
+      notifyListeners();
+    }
+    _hydrated = true;
   }
 }

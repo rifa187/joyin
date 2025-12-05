@@ -213,7 +213,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             end: Alignment.bottomRight,
                           ),
                           boxShadow: agree ? [
-                            BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
+                            BoxShadow(color: AppColors.primary.withAlpha((255 * 0.3).round()), blurRadius: 10, offset: const Offset(0, 4)),
                           ] : [],
                         ),
                         child: ElevatedButton(
@@ -283,7 +283,7 @@ class _RegisterPageState extends State<RegisterPage> {
           // Overlay Loading (Optional)
           if (authProvider.isLoading)
             Container(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha((255 * 0.1).round()),
               child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
             ),
         ],

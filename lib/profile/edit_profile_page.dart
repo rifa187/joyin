@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 // IMPORT PROVIDERS & MODEL
-import '../core/user_model.dart';
 import '../providers/auth_provider.dart'; 
 import '../providers/user_provider.dart'; 
 import '../widgets/custom_text_field.dart'; 
@@ -176,18 +175,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       alignment: Alignment.topCenter,
                       children: [
                         SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 80, bottom: 32),
-                            child: _buildProfileForm(isLoading),
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                          child: Column(
+                            children: [
+                              Center(
+                                child: ProfileAvatar(
+                                  photoUrl: user?.photoUrl,
+                                  isLoading: isLoading,
+                                  onEditTap: () => _showPicker(context),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildProfileForm(isLoading),
+                            ],
                           ),
-                        ),
-                        
-                        // Widget Avatar Terpisah
-                        ProfileAvatar(
-                          photoUrl: user?.photoUrl,
-                          isLoading: isLoading,
-                          onEditTap: () => _showPicker(context),
                         ),
                       ],
                     ),
@@ -204,13 +205,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget _buildProfileForm(bool isLoading) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 40),
-      padding: const EdgeInsets.fromLTRB(24, 72, 24, 32),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 25, offset: const Offset(0, 18)),
+          BoxShadow(
+            color: Colors.black.withAlpha((255 * 0.08).round()),
+            blurRadius: 25,
+            offset: const Offset(0, 18),
+          ),
         ],
       ),
       child: Column(
@@ -232,29 +236,43 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ),
           const SizedBox(height: 32),
-          
           CustomTextField(controller: _nameController, label: 'Nama', hintText: 'Enter Your Name'),
           const SizedBox(height: 24),
           CustomTextField(controller: _emailController, label: 'Email', readOnly: true, hintText: 'Enter Your Email'),
           const SizedBox(height: 24),
-          CustomTextField(controller: _phoneController, label: 'No. Telepon', keyboardType: TextInputType.phone, hintText: '0812-3456-7890'),
+          CustomTextField(
+            controller: _phoneController,
+            label: 'No. Telepon',
+            keyboardType: TextInputType.phone,
+            hintText: '0812-3456-7890',
+          ),
           const SizedBox(height: 24),
-          CustomTextField(controller: _dobController, label: 'Tanggal Lahir', readOnly: true, onTap: _selectDate, hintText: 'YYYY-MM-DD'),
-          
+          CustomTextField(
+            controller: _dobController,
+            label: 'Tanggal Lahir',
+            readOnly: true,
+            onTap: _selectDate,
+            hintText: 'YYYY-MM-DD',
+          ),
           const SizedBox(height: 32),
-          
-          // TOMBOL SIMPAN
           ElevatedButton(
-            onPressed: (_hasChanges && !isLoading) ? _saveProfile : null, // Logic Simpan Disini
+            onPressed: (_hasChanges && !isLoading) ? _saveProfile : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: _hasChanges ? const Color(0xFF63D1BE) : const Color(0xFFB0BEC5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.symmetric(vertical: 16),
               minimumSize: const Size(double.infinity, 54),
             ),
-            child: isLoading 
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text('Simpan', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  )
+                : Text(
+                    'Simpan',
+                    style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
           ),
         ],
       ),

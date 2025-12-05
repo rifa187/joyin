@@ -3,35 +3,77 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 // IMPORT FILE KAMU
+import 'package:joyin/providers/package_provider.dart';
+import 'package:joyin/providers/dashboard_provider.dart';
 import '../core/app_colors.dart';
 import '../providers/user_provider.dart';
-import '../providers/auth_provider.dart'; // Untuk Logout (opsional)
 import 'widgets/profile_avatar.dart'; // Widget Avatar Canggih
 import 'edit_profile_page.dart';
 import 'settings_page.dart';
+import 'referral_page.dart';
+import '../tutorial/tutorial_page.dart';
 import '../auth/login_page.dart'; // Untuk navigasi setelah logout
+import '../screens/pilih_paket_screen.dart';
+import 'about_page.dart';
+import '../package/package_theme.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   // Fungsi Logout (Tambahan - Bisa diaktifkan nanti)
   void _handleLogout(BuildContext context) {
-    // Contoh navigasi ke login page
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          title: Text(
+            'Konfirmasi Keluar',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'Apakah kamu yakin ingin keluar dari akun?',
+            style: GoogleFonts.poppins(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text('Batal', style: GoogleFonts.poppins(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              },
+              child: Text(
+                'Keluar',
+                style: GoogleFonts.poppins(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     // Gunakan Consumer agar halaman selalu update saat data berubah
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, _) {
+    return Consumer2<UserProvider, PackageProvider>(
+      builder: (context, userProvider, packageProvider, _) {
         final user = userProvider.user;
+        final String? packageName = packageProvider.currentUserPackage;
+        final PackageTheme packageTheme = PackageThemeResolver.resolve(packageName);
+        final bool hasPackage = packageName != null && packageName.isNotEmpty;
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF0F2F5),
+          backgroundColor: packageTheme.backgroundGradient.first,
           body: SingleChildScrollView(
             child: Column(
               children: [
@@ -39,13 +81,13 @@ class ProfilePage extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Color(0xFF63D1BE), Color(0xFFD6F28F)],
+                      colors: packageTheme.headerGradient,
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
                     ),
-                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +150,7 @@ class ProfilePage extends StatelessWidget {
                                 Text(
                                   user?.email ?? 'email@contoh.com',
                                   style: GoogleFonts.poppins(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.white.withAlpha((255 * 0.9).round()),
                                     fontSize: 14,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -124,6 +166,21 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
+                // --- Subscription Status Card ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shadowColor: packageTheme.accent.withOpacity(0.12),
+                    child: hasPackage
+                        ? _buildSubscriptionInfo(context, packageProvider.currentUserPackage!)
+                        : _buildNoSubscription(context),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // --- MENU LIST ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -133,10 +190,22 @@ class ProfilePage extends StatelessWidget {
                     child: Column(
                       children: [
                         _buildMenuItem(
+                          context,
+                          icon: Icons.card_giftcard_outlined,
+                          text: 'Kode Referral',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ReferralPage()),
+                          ),
+                          accent: packageTheme.accent,
+                        ),
+                        const Divider(height: 1),
+                        _buildMenuItem(
                           context, 
                           icon: Icons.person_outline, 
                           text: 'Edit Profil',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())),
+                          accent: packageTheme.accent,
                         ),
                         const Divider(height: 1),
                         _buildMenuItem(
@@ -144,24 +213,29 @@ class ProfilePage extends StatelessWidget {
                           icon: Icons.settings_outlined, 
                           text: 'Pengaturan',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
+                          accent: packageTheme.accent,
                         ),
                         const Divider(height: 1),
                         _buildMenuItem(
                           context, 
                           icon: Icons.help_outline, 
                           text: 'Bantuan',
-                          onTap: () {
-                            // Navigasi ke Bantuan (jika ada)
-                          },
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TutorialPage()),
+                          ),
+                          accent: packageTheme.accent,
                         ),
                         const Divider(height: 1),
                         _buildMenuItem(
                           context, 
                           icon: Icons.info_outline, 
                           text: 'Tentang Aplikasi',
-                          onTap: () {
-                            // Navigasi ke Tentang (jika ada)
-                          },
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AboutPage()),
+                          ),
+                          accent: packageTheme.accent,
                         ),
                       ],
                     ),
@@ -184,17 +258,58 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  Widget _buildSubscriptionInfo(BuildContext context, String currentPackage) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      leading: const Icon(Icons.star, color: Colors.amber),
+      title: Text('Paket Aktif: $currentPackage', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+      subtitle: Text('Lihat detail dan perpanjang', style: GoogleFonts.poppins()),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Provider.of<DashboardProvider>(context, listen: false).setSelectedIndex(4);
+      },
+    );
+  }
+
+  Widget _buildNoSubscription(BuildContext context) {
+    final PackageTheme theme = PackageThemeResolver.resolve(Provider.of<PackageProvider>(context, listen: false).currentUserPackage);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      leading: const Icon(Icons.star_border, color: Colors.grey),
+      title: Text('Belum Berlangganan', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+      subtitle: Text('Pilih paket untuk mulai', style: GoogleFonts.poppins()),
+      trailing: ElevatedButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: theme.accent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Text('Lihat Paket', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
   // Helper Widget untuk Menu Item
-  Widget _buildMenuItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap}) {
+  Widget _buildMenuItem(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+    required Color accent,
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.joyin.withOpacity(0.1),
+          color: accent.withOpacity(0.12),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: AppColors.joyin, size: 22),
+        child: Icon(icon, color: accent, size: 22),
       ),
       title: Text(
         text, 

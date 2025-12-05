@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:joyin/core/user_model.dart';
+import 'package:joyin/core/app_colors.dart';
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/providers/user_provider.dart';
 import 'package:joyin/screens/payment_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -12,7 +11,6 @@ class PilihPaketScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final packageProvider = Provider.of<PackageProvider>(context);
-    final user = Provider.of<UserProvider>(context).user!;
     final pageController = PageController(
       initialPage: 0,
       viewportFraction: 0.85,
@@ -96,7 +94,6 @@ class PilihPaketScreen extends StatelessWidget {
                         context,
                         index,
                         pageController,
-                        user,
                       );
                     },
                   ),
@@ -116,7 +113,6 @@ class PilihPaketScreen extends StatelessWidget {
     BuildContext context,
     int index,
     PageController pageController,
-    User user,
   ) {
     final packageProvider = Provider.of<PackageProvider>(context);
     final packageInfo = packageProvider.packages[index];
@@ -231,7 +227,7 @@ class PilihPaketScreen extends StatelessWidget {
                                   ),
                                   ElevatedButton(
                                     onPressed: () =>
-                                        _selectPackage(context, index, user),
+                                        _selectPackage(context, index),
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(
                                         vertical: 14,
@@ -297,21 +293,146 @@ class PilihPaketScreen extends StatelessWidget {
     );
   }
 
-  void _selectPackage(BuildContext context, int index, User user) {
+  void _selectPackage(BuildContext context, int index) {
     final packageProvider = Provider.of<PackageProvider>(
       context,
       listen: false,
     );
     final packageInfo = packageProvider.packages[index];
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PaymentScreen(
-          packageName: packageInfo.name,
-          packagePrice: packageInfo.price,
-          packageFeatures: packageInfo.features,
-        ),
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Konfirmasi Paket',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Paket ${packageInfo.name} · ${packageInfo.price}',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF00796B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Fitur yang kamu dapat:',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...packageInfo.features
+                  .map(
+                    (feature) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle,
+                              size: 18, color: Color(0xFF56AB2F)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              feature,
+                              style: GoogleFonts.poppins(fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Batal',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PaymentScreen(
+                              packageName: packageInfo.name,
+                              packagePrice: packageInfo.price,
+                              packageFeatures: packageInfo.features,
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.joyin,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Lanjutkan Pembayaran',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -6,9 +6,10 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 // WIDGETS & PAGES
-import '../../widgets/buttons.dart'; 
+import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
+import 'dart:math' as math;
 import 'forgot_password_page.dart';
 import 'register_page.dart';
 import '../core/app_colors.dart';
@@ -20,16 +21,27 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final email = TextEditingController();
   final pass = TextEditingController();
   bool _obscureText = true;
+  late final AnimationController _loaderController;
 
   @override
   void dispose() {
+    _loaderController.dispose();
     email.dispose();
     pass.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loaderController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
   }
 
   // Helper Widget TextField (TETAP SAMA SEPERTI KODE KAMU)
@@ -162,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
+                                color: AppColors.primary.withAlpha((255 * 0.3).round()),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -190,7 +202,7 @@ class _LoginPageState extends State<LoginPage> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                             ),
                             child: authProvider.isLoading
-                                ? const CircularProgressIndicator(color: Colors.white)
+                                ? _joyLoader(size: 26, stroke: 4)
                                 : Text(
                                     'Masuk',
                                     style: GoogleFonts.poppins(
@@ -246,12 +258,86 @@ class _LoginPageState extends State<LoginPage> {
           
           // Overlay Loading (Optional, karena tombol sudah loading)
           if (authProvider.isLoading)
-             Container(
-               color: Colors.black.withOpacity(0.1),
-               child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-             ),
+            Container(
+              color: Colors.black.withOpacity(0.55),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 26),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.25),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _joyLoader(size: 58, stroke: 8),
+                      gap(18),
+                      Text(
+                        'Masuk ke akun...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
-} 
+
+  Widget _joyLoader({double size = 32, double stroke = 6}) {
+    return AnimatedBuilder(
+      animation: _loaderController,
+      builder: (context, child) {
+        final angle = _loaderController.value * 2 * math.pi;
+        return Transform.rotate(
+          angle: angle,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const SweepGradient(
+                colors: [
+                  AppColors.grad1,
+                  AppColors.grad3,
+                  AppColors.grad1,
+                ],
+                stops: [0.0, 0.65, 1.0],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withAlpha((255 * 0.25).round()),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Center(
+              child: Container(
+                width: size - stroke * 2,
+                height: size - stroke * 2,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
