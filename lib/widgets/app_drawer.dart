@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/user_model.dart';
 import '../auth/login_page.dart';
-import '../profile/settings_page.dart';
 import 'package:joyin/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart'; // Import provider
 import 'package:joyin/providers/dashboard_provider.dart'; // Import DashboardProvider
@@ -11,12 +10,14 @@ class AppDrawer extends StatelessWidget {
   final User? user;
   final VoidCallback onEditProfile;
   final Function(int) onItemTap;
+  final VoidCallback? onAdminTap;
 
   const AppDrawer({
     super.key,
     required this.user,
     required this.onEditProfile,
     required this.onItemTap,
+    this.onAdminTap,
   });
 
   @override
@@ -64,14 +65,18 @@ class AppDrawer extends StatelessWidget {
               index: 3,
               onTap: () => onItemTap(3),
             ),
-            _buildDrawerItem(
-              context: context, // Pass context
-              dashboardProvider: dashboardProvider, // Pass dashboardProvider
-              icon: Icons.inventory_2_outlined,
-              text: AppLocalizations.of(context)!.myPackage,
-              index: 4,
-              onTap: () => onItemTap(4),
-            ),
+            if (user?.isAdmin == true)
+              _buildDrawerItem(
+                context: context,
+                dashboardProvider: dashboardProvider,
+                icon: Icons.admin_panel_settings_outlined,
+                text: 'Admin',
+                index: -1,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onAdminTap?.call();
+                },
+              ),
             _buildDrawerItem(
               context: context, // Pass context
               dashboardProvider: dashboardProvider, // Pass dashboardProvider
@@ -79,19 +84,6 @@ class AppDrawer extends StatelessWidget {
               text: AppLocalizations.of(context)!.profile,
               index: 5,
               onTap: () => onItemTap(5),
-            ),
-            _buildDrawerItem(
-              context: context, // Pass context
-              dashboardProvider: dashboardProvider, // Pass dashboardProvider
-              icon: Icons.settings_outlined,
-              text: AppLocalizations.of(context)!.settings,
-              index: 6,
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
-                );
-              },
             ),
             const SizedBox(height: 20),
             Padding(

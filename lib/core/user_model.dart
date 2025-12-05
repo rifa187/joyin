@@ -10,6 +10,7 @@ class User {
   final String? phoneNumber;
   final bool hasPurchasedPackage;
   final int? packageDurationMonths;
+  final bool isAdmin;
 
   User({
     required this.uid,
@@ -20,6 +21,7 @@ class User {
     this.phoneNumber,
     this.hasPurchasedPackage = false,
     this.packageDurationMonths,
+    this.isAdmin = false,
   });
 
   User copyWith({
@@ -29,6 +31,7 @@ class User {
     String? photoUrl,
     bool? hasPurchasedPackage,
     int? packageDurationMonths,
+    bool? isAdmin,
   }) {
     return User(
       uid: uid,
@@ -40,6 +43,7 @@ class User {
       hasPurchasedPackage: hasPurchasedPackage ?? this.hasPurchasedPackage,
       packageDurationMonths:
           packageDurationMonths ?? this.packageDurationMonths,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }

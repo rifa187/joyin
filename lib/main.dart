@@ -7,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 // --- IMPORT CONFIG & PAGES ---
 import 'package:joyin/firebase_options.dart';
 import 'package:joyin/onboarding/onboarding_page.dart';
-import 'package:joyin/dashboard/dashboard_page.dart';
+import 'package:joyin/dashboard/dashboard_gate.dart';
 import 'package:joyin/gen_l10n/app_localizations.dart';
 
 // --- IMPORT PROVIDERS ---
@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
       // --- PENDAFTARAN SEMUA PROVIDER ---
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => PackageProvider()),
+        ChangeNotifierProvider(create: (_) => PackageProvider()..hydrateFromPrefs()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         
         // ✅ Provider Otentikasi (Penting untuk Login/Regis)
@@ -116,7 +116,7 @@ class AuthWrapper extends StatelessWidget {
 
         // 3. User Sudah Login (Ada Data) -> Masuk ke Dashboard
         if (snapshot.hasData) {
-          return const DashboardPage();
+          return const DashboardGate();
         }
 
         // 4. User Belum Login -> Masuk ke Onboarding

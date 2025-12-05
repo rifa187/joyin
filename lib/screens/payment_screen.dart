@@ -4,7 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:joyin/dashboard/dashboard_page.dart';
+import 'package:joyin/dashboard/dashboard_gate.dart';
+import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
 
 // Custom TextInputFormatter for credit card numbers (XXXX XXXX XXXX XXXX)
@@ -643,6 +644,10 @@ class PaymentScreenState extends State<PaymentScreen> {
             context,
             listen: false,
           );
+          final packageProvider = Provider.of<PackageProvider>(
+            context,
+            listen: false,
+          );
           final navigator = Navigator.of(context);
 
           final prefs = await SharedPreferences.getInstance();
@@ -652,17 +657,23 @@ class PaymentScreenState extends State<PaymentScreen> {
 
           if (!mounted) return;
 
-          final currentUser = userProvider.user!;
-          final updatedUser = currentUser.copyWith(
-            hasPurchasedPackage: true,
-            packageDurationMonths: _duration,
-          );
-          userProvider.setUser(updatedUser);
+          final currentUser = userProvider.user;
+          if (currentUser != null) {
+            final updatedUser = currentUser.copyWith(
+              hasPurchasedPackage: true,
+              packageDurationMonths: _duration,
+            );
+            userProvider.setUser(updatedUser);
+          }
+
+          // Tandai paket yang aktif di provider agar dashboard & profil langsung ter-update.
+          packageProvider.loadCurrentUserPackage(widget.packageName);
+          packageProvider.selectDuration(widget.packageName, _duration);
 
           if (!mounted) return;
 
           navigator.pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const DashboardPage()),
+            MaterialPageRoute(builder: (context) => const DashboardGate()),
             (route) => false,
           );
         },

@@ -1,3 +1,4 @@
+import 'package:joyin/providers/package_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,8 @@ import '../core/app_colors.dart';
 import '../providers/user_provider.dart';
 // Import file grafik yang baru kita buat
 import 'widgets/dashboard_charts.dart'; 
+import '../screens/pilih_paket_screen.dart';
+import '../package/package_theme.dart';
 
 class HomeContent extends StatefulWidget {
   const HomeContent({super.key});
@@ -38,16 +41,42 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
   double _mascotHeight = 200;
   double _mascotOffsetX = -50;
   double _mascotOffsetY = 130;
+  late final AnimationController _entranceController;
+  late final Animation<double> _cardSlide;
+  late final Animation<double> _cardFade;
 
   @override
   void initState() {
     super.initState();
     _chartYears = List<int>.generate(4, (index) => DateTime.now().year - index);
     _selectedChartYear = _chartYears.first;
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+    _cardSlide = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOutBack),
+    );
+    _cardFade = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final packageProvider = context.watch<PackageProvider>();
+    final String? packageName = packageProvider.currentUserPackage;
+    final PackageTheme packageTheme = PackageThemeResolver.resolve(packageName);
+    final bool hasPackage = packageName != null && packageName.isNotEmpty;
+
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
         final user = userProvider.user;
@@ -56,53 +85,85 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
                 : user?.displayName) ?? 'User';
         final topPadding = MediaQuery.of(context).padding.top;
 
-        return Container(
-          color: const Color(0xFFF0F2F5),
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildHeroBanner(displayName, topPadding),
-                Transform.translate(
-                  offset: const Offset(0, -80),
-                  child: _buildHomeOverviewCard(),
+        return Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: packageTheme.backgroundGradient,
                 ),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
-          ),
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeroBanner(displayName, topPadding, hasPackage, packageTheme),
+                  Transform.translate(
+                    offset: const Offset(0, -80),
+                    child: FadeTransition(
+                      opacity: _cardFade,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.2),
+                          end: Offset.zero,
+                        ).animate(_cardSlide),
+                        child: hasPackage
+                            ? _buildHomeOverviewCard(packageTheme)
+                            : _buildHomeOverviewCardNoPackage(packageTheme),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 48),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  Widget _buildHeroBanner(String displayName, double topPadding) {
+  Widget _buildHeroBanner(String displayName, double topPadding, bool hasPackage, PackageTheme theme) {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(24, topPadding + 52, 24, 132),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF5FCA84), Color(0xFFA8DE7B), Color(0xFFC7DE7B)],
+          colors: theme.headerGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
                   text: TextSpan(
                     style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.4, fontWeight: FontWeight.w600),
-                    children: [
-                      const TextSpan(text: 'Selamat datang, '),
-                      TextSpan(text: displayName, style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFFFFD447))),
-                      const TextSpan(text: '\nJoyin siap nemenin bisnismu.'),
-                    ],
+                    children: hasPackage
+                        ? [
+                            const TextSpan(text: 'Selamat datang, '),
+                            TextSpan(
+                              text: displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFFFC047),
+                              ),
+                            ),
+                            const TextSpan(text: '\nJoyin siap nemenin bisnismu.'),
+                          ]
+                        : [
+                            const TextSpan(text: 'Selamat datang di Joyin!'),
+                            const TextSpan(text: '\nUpgrade akunmu untuk mulai.'),
+                          ],
                   ),
                 ),
               ],
@@ -133,14 +194,48 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildHomeOverviewCard() {
+  Widget _buildHomeOverviewCardNoPackage(PackageTheme theme) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(40),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 30, offset: const Offset(0, 15))],
+        boxShadow: [BoxShadow(color: theme.accent.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 15))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Fitur Terkunci', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 18),
+          Text('Beli paket untuk membuka semua fitur dan mulai kelola chat bisnismu dengan lebih mudah.', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.accent,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: Text('Lihat Pilihan Paket', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeOverviewCard(PackageTheme theme) {
+    return Container(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(40),
+        boxShadow: [BoxShadow(color: theme.accent.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 15))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -165,10 +260,11 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
 
   // ... (Fungsi Stat Row & Legend SAMA SEPERTI SEBELUMNYA) ...
   Widget _buildChatStatRow() {
+    final accent = PackageThemeResolver.resolve(context.read<PackageProvider>().currentUserPackage).accent;
     final stats = [
-      _ChatStatCardData(value: '0', label: 'Chat Bulanan', accent: const Color(0xFF63D1BE), background: const Color(0xFFE9FFF8)),
-      _ChatStatCardData(value: '0', label: 'Chat Bulanan', accent: const Color(0xFFB79CEF), background: const Color(0xFFF3ECFF)),
-      _ChatStatCardData(value: '0', label: 'Chat Bulanan', accent: const Color(0xFFF4B156), background: const Color(0xFFFFF1DA)),
+      _ChatStatCardData(value: '0', label: 'Chat Bulanan', accent: accent, background: accent.withOpacity(0.1)),
+      _ChatStatCardData(value: '0', label: 'Chat Harian', accent: accent.withOpacity(0.8), background: accent.withOpacity(0.08)),
+      _ChatStatCardData(value: '0', label: 'Chat Mingguan', accent: accent.withOpacity(0.6), background: accent.withOpacity(0.06)),
     ];
     return Row(children: stats.map((s) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: _buildChatStatCard(s)))).toList());
   }
@@ -261,9 +357,27 @@ class _MonthlyStat { final String label; final double value; const _MonthlyStat(
 
 class _MascotFadeSlide extends StatefulWidget { final Widget child; const _MascotFadeSlide({required this.child}); @override State<_MascotFadeSlide> createState() => _MascotFadeSlideState(); }
 class _MascotFadeSlideState extends State<_MascotFadeSlide> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 950));
   late final Animation<double> _fade = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
-  late final Animation<Offset> _slide = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutBack));
-  @override void dispose() { _c.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) => FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
+  late final Animation<Offset> _slide = Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero)
+      .animate(CurvedAnimation(parent: _c, curve: Curves.easeOutBack));
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) _c.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
 }

@@ -19,7 +19,12 @@ class LocalAuthService {
     if (phoneNumber != null) {
       await _secureStorage.write(key: _phoneNumberKey, value: phoneNumber);
     }
-    return User(uid: 'local_user', email: email, displayName: displayName ?? email);
+    return User(
+      uid: 'local_user',
+      email: email,
+      displayName: displayName ?? email,
+      isAdmin: email.toLowerCase().contains('admin'),
+    );
   }
 
   Future<User?> signIn(String email, String password) async {
@@ -37,6 +42,7 @@ class LocalAuthService {
         displayName: displayName ?? email,
         phoneNumber: phoneNumber,
         dateOfBirth: dateOfBirth,
+        isAdmin: email.toLowerCase().contains('admin'),
       );
     }
     return null;

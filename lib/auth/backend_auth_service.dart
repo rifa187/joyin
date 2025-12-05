@@ -52,6 +52,7 @@ class BackendAuthService {
           phoneNumber: data['phone'],
           dateOfBirth: data['birthDate'] != null ? DateTime.parse(data['birthDate']).toIso8601String() : null,
           hasPurchasedPackage: false, // This will be updated later
+          isAdmin: data['role'] == 'admin' || data['isAdmin'] == true,
         );
       }
       return null;
