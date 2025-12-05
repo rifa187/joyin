@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../core/app_colors.dart';
+import  g;
 import '../providers/user_provider.dart';
 // Import file grafik yang baru kita buat
 import 'widgets/dashboard_charts.dart'; 
