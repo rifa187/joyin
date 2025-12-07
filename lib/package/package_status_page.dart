@@ -1,14 +1,35 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/widgets/locked_feature_widget.dart';
 import 'package:provider/provider.dart';
 import 'package_theme.dart';
 import '../screens/pilih_paket_screen.dart';
 
-class PackageStatusPage extends StatelessWidget {
+class PackageStatusPage extends StatefulWidget {
   const PackageStatusPage({super.key});
+
+  @override
+  State<PackageStatusPage> createState() => _PackageStatusPageState();
+}
+
+class _PackageStatusPageState extends State<PackageStatusPage> with SingleTickerProviderStateMixin {
+  late final AnimationController _entranceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,16 +73,95 @@ class PackageStatusPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildHeader(selectedPackage?.name ?? 'Paket Aktif', theme, daysLeft, selectedDuration, dueDate, progress, accentColor, context),
+                      _buildAnimatedSection(
+                        start: 0.0,
+                        end: 0.4,
+                        child: _buildHeader(selectedPackage?.name ?? 'Paket Aktif', theme, daysLeft, selectedDuration, dueDate, progress, accentColor, context),
+                      ),
                       const SizedBox(height: 12),
-                      _buildPackageActions(context, accentColor),
+                      _buildAnimatedSection(
+                        start: 0.2,
+                        end: 0.6,
+                        child: _buildPackageActions(context, accentColor),
+                      ),
                       const SizedBox(height: 18),
-                      _buildFeatureSection(selectedPackage?.features ?? [], accentColor),
+                      _buildAnimatedSection(
+                        start: 0.35,
+                        end: 0.9,
+                        child: _buildFeatureSection(selectedPackage?.features ?? [], accentColor),
+                      ),
                     ],
                   ),
                 )
-              : _PrePurchasePackageView(accentColor: accentColor, theme: theme),
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildAnimatedSection(
+                        start: 0.0,
+                        end: 0.4,
+                        child: _buildPrePurchaseHero(accentColor, theme),
+                      ),
+                      const SizedBox(height: 18),
+                      _buildAnimatedSection(
+                        start: 0.2,
+                        end: 0.65,
+                        child: _PrePurchaseCard(
+                          title: 'Kenapa harus upgrade?',
+                          items: const [
+                            'Balas otomatis 24/7 tanpa kehilangan sentuhan personal.',
+                            'Bot siap pakai untuk alur chat, FAQ, dan broadcast.',
+                            'Laporan ringkas untuk pantau performa tim dan pesan.',
+                          ],
+                          accent: accentColor,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _buildAnimatedSection(
+                        start: 0.35,
+                        end: 0.9,
+                        child: _PrePurchaseCard(
+                          title: 'Langkah cepat',
+                          items: const [
+                            'Pilih paket yang sesuai kebutuhan timmu.',
+                            'Hubungkan channel chat utama dan atur bot.',
+                            'Mulai kirimkan broadcast atau quick reply ke pelanggan.',
+                          ],
+                          accent: accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedSection({
+    required double start,
+    required double end,
+    required Widget child,
+  }) {
+    final fade = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(start, end, curve: Curves.easeOut),
+    );
+    final slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: Interval(start, end, curve: Curves.easeOutBack),
+      ),
+    );
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(
+        position: slide,
+        child: child,
       ),
     );
   }
@@ -80,19 +180,9 @@ class PackageStatusPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: theme.headerGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: theme.headerGradient.last.withValues(alpha: 0.22),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
-          ),
-        ],
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,6 +242,75 @@ class PackageStatusPage extends StatelessWidget {
             },
           ),
           const SizedBox(height: 18),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrePurchaseHero(Color accentColor, PackageTheme theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [accentColor, theme.headerGradient.last],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withOpacity(0.26),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mulai dengan Paket Joyin',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pilih paket yang cocok untuk bisnis kamu dan nikmati balasan otomatis, bot cerdas, serta laporan yang siap pakai.',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              height: 1.5,
+              color: Colors.white.withValues(alpha: 0.92),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: accentColor,
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+                );
+              },
+              child: Text(
+                'Lihat Pilihan Paket',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -322,14 +481,21 @@ class _StatPill extends StatelessWidget {
           ),
           if (progress != null) ...[
             const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: LinearProgressIndicator(
-                value: progress!.clamp(0, 1),
-                minHeight: 6,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOut,
+              tween: Tween(begin: 0, end: progress!.clamp(0, 1)),
+              builder: (context, value, _) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: LinearProgressIndicator(
+                    value: value,
+                    minHeight: 6,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                );
+              },
             ),
           ],
         ],
@@ -426,6 +592,7 @@ class _PrePurchasePackageView extends StatelessWidget {
         SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
                 width: double.infinity,
@@ -466,24 +633,27 @@ class _PrePurchasePackageView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: accentColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
-                        );
-                      },
-                      child: Text(
-                        'Lihat Pilihan Paket',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: accentColor,
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const PilihPaketScreen()),
+                          );
+                        },
+                        child: Text(
+                          'Lihat Pilihan Paket',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
                     ),
@@ -502,19 +672,13 @@ class _PrePurchasePackageView extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               _PrePurchaseCard(
-                title: 'Yang kamu dapatkan',
+                title: 'Langkah cepat',
                 items: const [
-                  'Template respon dan quick reply.',
-                  'Integrasi multi-channel dan multi-user.',
-                  'Prioritas dukungan serta pembaruan fitur.',
+                  'Pilih paket yang sesuai kebutuhan timmu.',
+                  'Hubungkan channel chat utama dan atur bot.',
+                  'Mulai kirimkan broadcast atau quick reply ke pelanggan.',
                 ],
                 accent: accentColor,
-              ),
-              const SizedBox(height: 18),
-              const LockedFeatureWidget(
-                title: 'Paket Terkunci',
-                message: 'Upgrade paketmu untuk mengaktifkan fitur paket dan statistik.',
-                icon: Icons.inventory_2_outlined,
               ),
             ],
           ),

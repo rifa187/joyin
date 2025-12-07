@@ -54,7 +54,7 @@ class PackageProvider with ChangeNotifier {
         'Prioritas dukungan teknis',
       ],
       gradient: const LinearGradient(
-        colors: [Color(0xFF5FCAAC), Color(0xFFDAEC75)],
+        colors: [Color(0xFF9C63F7), Color(0xFF60C8AC)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -74,7 +74,7 @@ class PackageProvider with ChangeNotifier {
         'Integrasi sistem internal (CRM/API)',
       ],
       gradient: const LinearGradient(
-        colors: [Color(0xFF5FCAAC), Color(0xFF9B51E0)],
+        colors: [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),

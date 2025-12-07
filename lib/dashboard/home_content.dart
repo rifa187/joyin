@@ -42,6 +42,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
   double _mascotOffsetX = -50;
   double _mascotOffsetY = 130;
   late final AnimationController _entranceController;
+  late final AnimationController _textController;
   late final Animation<double> _cardSlide;
   late final Animation<double> _cardFade;
 
@@ -53,6 +54,10 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
     _entranceController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
+    )..forward();
+    _textController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
     )..forward();
     _cardSlide = CurvedAnimation(
       parent: _entranceController,
@@ -67,6 +72,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
   @override
   void dispose() {
     _entranceController.dispose();
+    _textController.dispose();
     super.dispose();
   }
 
@@ -145,27 +151,7 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.4, fontWeight: FontWeight.w600),
-                    children: hasPackage
-                        ? [
-                            const TextSpan(text: 'Selamat datang, '),
-                            TextSpan(
-                              text: displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFFFC047),
-                              ),
-                            ),
-                            const TextSpan(text: '\nJoyin siap nemenin bisnismu.'),
-                          ]
-                        : [
-                            const TextSpan(text: 'Selamat datang di Joyin!'),
-                            const TextSpan(text: '\nUpgrade akunmu untuk mulai.'),
-                          ],
-                  ),
-                ),
+            _buildWelcomeText(displayName, hasPackage),
               ],
             ),
           ),
@@ -191,6 +177,38 @@ class _HomeContentState extends State<HomeContent> with SingleTickerProviderStat
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWelcomeText(String displayName, bool hasPackage) {
+    final baseStyle = GoogleFonts.poppins(
+      fontSize: 20,
+      color: Colors.white,
+      height: 1.4,
+      fontWeight: FontWeight.w600,
+    );
+    final highlightStyle = baseStyle.copyWith(
+      fontWeight: FontWeight.w700,
+      color: const Color(0xFFFFC047),
+    );
+
+    final lines = hasPackage
+        ? [
+            [_TextSegment('Selamat datang, ', baseStyle), _TextSegment(displayName, highlightStyle)],
+            [_TextSegment('Joyin siap nemenin bisnismu.', baseStyle)],
+          ]
+        : [
+            [_TextSegment('Selamat datang di Joyin!', baseStyle)],
+            [_TextSegment('Upgrade akunmu untuk mulai.', baseStyle)],
+          ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SplitTextLine(segments: lines[0], controller: _textController),
+        const SizedBox(height: 6),
+        _SplitTextLine(segments: lines[1], controller: _textController, delayOffset: 0.12),
+      ],
     );
   }
 
@@ -380,4 +398,75 @@ class _MascotFadeSlideState extends State<_MascotFadeSlide> with SingleTickerPro
   @override
   Widget build(BuildContext context) =>
       FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
+}
+
+class _TextSegment {
+  final String text;
+  final TextStyle style;
+  const _TextSegment(this.text, this.style);
+}
+
+class _SplitTextLine extends StatelessWidget {
+  final List<_TextSegment> segments;
+  final AnimationController controller;
+  final double stagger;
+  final double offsetY;
+  final double delayOffset;
+
+  const _SplitTextLine({
+    required this.segments,
+    required this.controller,
+    this.stagger = 0.045,
+    this.offsetY = 14,
+    this.delayOffset = 0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final chars = <_TextSegment>[];
+    for (final segment in segments) {
+      for (final char in segment.text.split('')) {
+        chars.add(_TextSegment(char, segment.style));
+      }
+    }
+    if (chars.isEmpty) return const SizedBox.shrink();
+
+    final int total = chars.length;
+    final double maxSpread = 0.7;
+    final double spread = (stagger * (total - 1)).clamp(0, maxSpread);
+    final double step = total > 1 ? spread / (total - 1) : 0;
+
+    return Wrap(
+      spacing: 0,
+      runSpacing: 0,
+      children: List.generate(chars.length, (index) {
+        final double rawStart = (index * step) + delayOffset;
+        final double clampedStart = rawStart.clamp(0, 0.99);
+        final double clampedEnd = (clampedStart + 0.35).clamp(clampedStart + 0.01, 1);
+        final anim = CurvedAnimation(
+          parent: controller,
+          curve: Interval(
+            clampedStart,
+            clampedEnd,
+            curve: Curves.easeOut,
+          ),
+        );
+
+        return AnimatedBuilder(
+          animation: anim,
+          builder: (context, child) {
+            final double t = anim.value;
+            return Opacity(
+              opacity: t,
+              child: Transform.translate(
+                offset: Offset(0, offsetY * (1 - t)),
+                child: child,
+              ),
+            );
+          },
+          child: Text(chars[index].text, style: chars[index].style),
+        );
+      }),
+    );
+  }
 }

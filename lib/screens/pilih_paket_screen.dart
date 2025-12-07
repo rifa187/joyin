@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:joyin/core/app_colors.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/screens/payment_screen.dart';
 import 'package:provider/provider.dart';
+import '../package/package_theme.dart';
+import '../package/package_info.dart';
 
 class PilihPaketScreen extends StatelessWidget {
   const PilihPaketScreen({super.key});
@@ -11,6 +13,23 @@ class PilihPaketScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final packageProvider = Provider.of<PackageProvider>(context);
+    final defaultTheme = PackageThemeResolver.resolve(
+      packageProvider.packages.isNotEmpty ? packageProvider.packages.first.name : null,
+    );
+    if (packageProvider.packages.isEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 12),
+              Text('Memuat paket...', style: GoogleFonts.poppins()),
+            ],
+          ),
+        ),
+      );
+    }
     final pageController = PageController(
       initialPage: 0,
       viewportFraction: 0.85,
@@ -76,7 +95,7 @@ class PilihPaketScreen extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00796B),
+                      color: defaultTheme.accent,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -99,7 +118,17 @@ class PilihPaketScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Add dots indicator here if needed
+                AnimatedBuilder(
+                  animation: pageController,
+                  builder: (context, _) {
+                    final double currentPage =
+                        pageController.hasClients ? (pageController.page ?? 0.0) : 0.0;
+                    return _buildPageIndicator(
+                      packages: packageProvider.packages,
+                      currentPage: currentPage,
+                    );
+                  },
+                ),
                 const SizedBox(height: 180),
               ],
             ),
@@ -116,6 +145,8 @@ class PilihPaketScreen extends StatelessWidget {
   ) {
     final packageProvider = Provider.of<PackageProvider>(context);
     final packageInfo = packageProvider.packages[index];
+    final packageTheme = PackageThemeResolver.resolve(packageInfo.name);
+    final isActive = packageProvider.currentUserPackage?.toLowerCase() == packageInfo.name.toLowerCase();
 
     return AnimatedBuilder(
       animation: pageController,
@@ -123,173 +154,211 @@ class PilihPaketScreen extends StatelessWidget {
         double value = 1.0;
         if (pageController.position.haveDimensions) {
           value = pageController.page! - index;
-          value = (1 - (value.abs() * 0.15)).clamp(0.85, 1.0);
+          value = (1 - (value.abs() * 0.15)).clamp(0.85, 1.0).toDouble();
         }
         return Transform.scale(scale: value, child: child);
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-        child: Container(
-          padding: const EdgeInsets.all(2.5),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFF304), Color(0xFFF09EF1)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(26.0),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFFF09EF1).withAlpha(128),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20.0),
-                  decoration: BoxDecoration(gradient: packageInfo.gradient),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Paket ${packageInfo.name}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        packageInfo.price,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withAlpha(230),
-                        ),
-                      ),
-                    ],
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2.5),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: packageTheme.cardGradient),
+                borderRadius: BorderRadius.circular(26.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: packageTheme.cardGradient.last.withAlpha(128),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
                   ),
-                ),
-                Expanded(
-                  child: Container(
-                    color: Colors.white,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: constraints.maxHeight,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20.0),
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: packageInfo.features
-                                        .map(
-                                          (feature) => Padding(
-                                            padding: const EdgeInsets.only(
-                                              bottom: 9,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.check,
-                                                  color: Color(0xFF56AB2F),
-                                                  size: 20,
-                                                ),
-                                                const SizedBox(width: 10),
-                                                Expanded(
-                                                  child: Text(
-                                                    feature,
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 13.5,
-                                                      color: Colors.black87,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        )
-                                        .toList(),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () =>
-                                        _selectPackage(context, index),
-                                    style: ElevatedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.black.withValues(alpha: 0.2),
-                                      elevation: 6,
-                                    ).copyWith(
-                                      overlayColor: WidgetStateProperty.all(
-                                        Colors.white.withValues(alpha: 0.1),
-                                      ),
-                                      textStyle: WidgetStateProperty.all(
-                                        GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Ink(
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFF5FCA84),
-                                            Color(0xFFA8DE7B),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Container(
-                                        alignment: Alignment.center,
-                                        constraints: const BoxConstraints(
-                                          minHeight: 48,
-                                        ),
-                                        child: Text(
-                                          'Pilih ${packageInfo.name}',
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: packageTheme.headerGradient),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Paket ${packageInfo.name}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
-                        );
-                      },
+                          const SizedBox(height: 4),
+                          Text(
+                            packageInfo.price,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withAlpha(230),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        color: Colors.white,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return SingleChildScrollView(
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight: constraints.maxHeight,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20.0),
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: packageInfo.features
+                                            .map(
+                                              (feature) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 9,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.check,
+                                                      color: packageTheme.accent,
+                                                      size: 20,
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        feature,
+                                                        style: GoogleFonts.poppins(
+                                                          fontSize: 13.5,
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: isActive ? null : () => _selectPackage(context, index),
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.black.withValues(alpha: 0.2),
+                                          elevation: 6,
+                                          disabledBackgroundColor: Colors.grey.shade300,
+                                          disabledForegroundColor: Colors.grey.shade700,
+                                        ).copyWith(
+                                          overlayColor: WidgetStateProperty.all(
+                                            Colors.white.withValues(alpha: 0.1),
+                                          ),
+                                          textStyle: WidgetStateProperty.all(
+                                            GoogleFonts.poppins(
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Ink(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(colors: packageTheme.cardGradient),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Container(
+                                            alignment: Alignment.center,
+                                            constraints: const BoxConstraints(
+                                              minHeight: 48,
+                                            ),
+                                            child: Text(
+                                              isActive ? 'Paket Aktif' : 'Pilih ${packageInfo.name}',
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (isActive)
+              Positioned(
+                top: 12,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(230),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: packageTheme.accent),
+                  ),
+                  child: Text(
+                    'Aktif',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      color: packageTheme.accent,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
+              ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPageIndicator({required List<PackageInfo> packages, required double currentPage}) {
+    if (packages.isEmpty) return const SizedBox.shrink();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: packages.asMap().entries.map((entry) {
+        final idx = entry.key;
+        final theme = PackageThemeResolver.resolve(entry.value.name);
+        final isActive = (currentPage.round() == idx);
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          height: 8,
+          width: isActive ? 22 : 8,
+          decoration: BoxDecoration(
+            color: isActive ? theme.accent : Colors.grey.shade400,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -299,6 +368,7 @@ class PilihPaketScreen extends StatelessWidget {
       listen: false,
     );
     final packageInfo = packageProvider.packages[index];
+    final packageTheme = PackageThemeResolver.resolve(packageInfo.name);
 
     showModalBottomSheet<void>(
       context: context,
@@ -338,11 +408,11 @@ class PilihPaketScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Paket ${packageInfo.name} · ${packageInfo.price}',
+                'Paket ${packageInfo.name} - ${packageInfo.price}',
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF00796B),
+                  color: packageTheme.accent,
                 ),
               ),
               const SizedBox(height: 12),
@@ -360,8 +430,11 @@ class PilihPaketScreen extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle,
-                              size: 18, color: Color(0xFF56AB2F)),
+                          Icon(
+                            Icons.check_circle,
+                            size: 18,
+                            color: packageTheme.accent,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -491,3 +564,4 @@ class _WaveBackground extends StatelessWidget {
     );
   }
 }
+

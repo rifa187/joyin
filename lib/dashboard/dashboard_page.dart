@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 // PROVIDERS & COMPONENTS
-import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/user_provider.dart';
 import 'package:joyin/providers/package_provider.dart';
 import '../widgets/app_drawer.dart';
 import '../package/package_theme.dart';
 import '../admin/admin_orders_page.dart';
+import 'package:joyin/providers/dashboard_provider.dart';
 
 // PAGES IMPORT
 import 'home_content.dart';

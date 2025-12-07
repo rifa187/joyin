@@ -1,7 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_colors.dart';
 import '../core/user_model.dart';
@@ -17,12 +20,17 @@ class ReferralPage extends StatefulWidget {
 class _ReferralPageState extends State<ReferralPage> {
   late final TextEditingController _referralInputController;
   String? _claimedCode;
+  String? _referralCode;
+  String? _lastUserId;
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
     _referralInputController = TextEditingController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReferralCode(context.read<UserProvider>().user);
+    });
   }
 
   @override
@@ -34,7 +42,11 @@ class _ReferralPageState extends State<ReferralPage> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<UserProvider>().user;
-    final referralCode = _buildReferralCode(user);
+    if (_lastUserId != user?.uid) {
+      _lastUserId = user?.uid;
+      _loadReferralCode(user);
+    }
+    final referralCode = _referralCode ?? _buildReferralCode(user);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -196,30 +208,13 @@ class _ReferralPageState extends State<ReferralPage> {
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-            ),
-            child: Text(
-              'Setiap 20 orang pakai kode kamu -> diskon 6% untukmu',
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
                 child: SelectableText(
                   referralCode,
                   style: GoogleFonts.poppins(
@@ -373,12 +368,13 @@ class _ReferralPageState extends State<ReferralPage> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
             children: [
-              _buildStepChip('Bagikan kode', Icons.send_rounded),
-              _buildStepChip('Teman daftar', Icons.person_add_alt_1_rounded),
-              _buildStepChip('Bonus aktif', Icons.celebration_rounded),
+              _buildStepRow(1, 'Bagikan kode referral ke teman lewat chat atau media sosial.'),
+              const SizedBox(height: 10),
+              _buildStepRow(2, 'Teman daftar menggunakan kode kamu dan aktifkan akunnya.'),
+              const SizedBox(height: 10),
+              _buildStepRow(3, 'Bonus referral otomatis aktif di akun kamu.'),
             ],
           ),
         ],
@@ -390,35 +386,39 @@ class _ReferralPageState extends State<ReferralPage> {
     return const SizedBox.shrink();
   }
 
-  Widget _buildStepChip(String text, IconData icon) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF6F7FB),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: AppColors.joyin),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                text,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.5,
-                  color: AppColors.textPrimary,
-                ),
-                textAlign: TextAlign.center,
+  Widget _buildStepRow(int step, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: 32,
+          width: 32,
+          decoration: BoxDecoration(
+            color: AppColors.joyin.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text(
+              '$step',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: AppColors.joyin,
               ),
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -429,48 +429,65 @@ class _ReferralPageState extends State<ReferralPage> {
     required Color foregroundColor,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: foregroundColor, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w700,
-                  color: foregroundColor,
+    return Semantics(
+      label: label,
+      button: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: foregroundColor, size: 18, semanticLabel: label),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    color: foregroundColor,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
+  Future<void> _loadReferralCode(User? user) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'referral_code_${user?.uid ?? 'guest'}';
+    final existing = prefs.getString(key);
+    if (mounted && existing != null && existing.isNotEmpty) {
+      setState(() => _referralCode = existing);
+      return;
+    }
+    final generated = _buildReferralCode(user);
+    await prefs.setString(key, generated);
+    if (mounted) {
+      setState(() => _referralCode = generated);
+    }
+  }
+
   String _buildReferralCode(User? user) {
-    final normalizedName = (user?.displayName ?? '').trim().toUpperCase();
-    if (normalizedName.isNotEmpty) {
-      final words = normalizedName.split(' ');
-      final initials = words.map((w) => w.isNotEmpty ? w[0] : '').take(2).join();
-      return 'JYN-$initials${DateTime.now().year % 100}';
-    }
-    final uid = user?.uid ?? '';
-    if (uid.length >= 5) {
-      return 'JYN-${uid.substring(0, 5).toUpperCase()}';
-    }
-    return 'JYN-INVITE';
+    final seed = user?.uid?.isNotEmpty == true ? user!.uid : DateTime.now().millisecondsSinceEpoch.toString();
+    final code = _generateCodeFromSeed(seed, length: 6);
+    return 'JYN-$code';
+  }
+
+  String _generateCodeFromSeed(String seed, {int length = 6}) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random(seed.hashCode);
+    return List.generate(length, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
   Future<void> _copyCode(String referralCode) async {
