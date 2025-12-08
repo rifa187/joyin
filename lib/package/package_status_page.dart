@@ -3,8 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:visibility_detector/visibility_detector.dart';
+import 'dart:ui';
 import 'package_theme.dart';
 import '../screens/pilih_paket_screen.dart';
+import '../widgets/typing_text.dart';
 
 class PackageStatusPage extends StatefulWidget {
   const PackageStatusPage({super.key});
@@ -13,8 +16,11 @@ class PackageStatusPage extends StatefulWidget {
   State<PackageStatusPage> createState() => _PackageStatusPageState();
 }
 
-class _PackageStatusPageState extends State<PackageStatusPage> with SingleTickerProviderStateMixin {
+class _PackageStatusPageState extends State<PackageStatusPage> with TickerProviderStateMixin {
   late final AnimationController _entranceController;
+  late final AnimationController _bgController;
+  final GlobalKey _featureKey = GlobalKey();
+  final Set<int> _revealedFeatureIndices = {};
 
   @override
   void initState() {
@@ -23,11 +29,16 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
+    _bgController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    );
   }
 
   @override
   void dispose() {
     _entranceController.dispose();
+    _bgController.dispose();
     super.dispose();
   }
 
@@ -49,6 +60,14 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
 
     final PackageTheme theme = PackageThemeResolver.resolve(selectedPackage?.name);
     final Color accentColor = theme.accent;
+    final bool animateBackground = theme.headerGradient.toSet().length > 1;
+
+    if (animateBackground && !_bgController.isAnimating) {
+      _bgController.repeat();
+    } else if (!animateBackground && _bgController.isAnimating) {
+      _bgController.stop();
+      _bgController.value = 0;
+    }
 
     final now = DateTime.now();
     final dueDate = now.add(Duration(days: 30 * selectedDuration));
@@ -56,84 +75,130 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
     final int totalDays = (30 * selectedDuration).clamp(1, 3650);
     final double progress = (daysLeft / totalDays).clamp(0, 1);
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: theme.headerGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _bgController,
+      builder: (context, child) {
+        final double shift = animateBackground
+            ? lerpDouble(-1.5, 1.5, _bgController.value) ?? 0
+            : 0;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: theme.headerGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            ),
+            if (animateBackground)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: theme.headerGradient
+                            .map((c) => c.withOpacity(0.6))
+                            .toList(),
+                        begin: Alignment(-2 + shift, 0),
+                        end: Alignment(2 + shift, 0),
+                        tileMode: TileMode.mirror,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned.fill(child: child!),
+          ],
+        );
+      },
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
-          child: hasPackage
-              ? SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildAnimatedSection(
-                        start: 0.0,
-                        end: 0.4,
-                        child: _buildHeader(selectedPackage?.name ?? 'Paket Aktif', theme, daysLeft, selectedDuration, dueDate, progress, accentColor, context),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildAnimatedSection(
-                        start: 0.2,
-                        end: 0.6,
-                        child: _buildPackageActions(context, accentColor),
-                      ),
-                      const SizedBox(height: 18),
-                      _buildAnimatedSection(
-                        start: 0.35,
-                        end: 0.9,
-                        child: _buildFeatureSection(selectedPackage?.features ?? [], accentColor),
-                      ),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildAnimatedSection(
-                        start: 0.0,
-                        end: 0.4,
-                        child: _buildPrePurchaseHero(accentColor, theme),
-                      ),
-                      const SizedBox(height: 18),
-                      _buildAnimatedSection(
-                        start: 0.2,
-                        end: 0.65,
-                        child: _PrePurchaseCard(
-                          title: 'Kenapa harus upgrade?',
-                          items: const [
-                            'Balas otomatis 24/7 tanpa kehilangan sentuhan personal.',
-                            'Bot siap pakai untuk alur chat, FAQ, dan broadcast.',
-                            'Laporan ringkas untuk pantau performa tim dan pesan.',
-                          ],
-                          accent: accentColor,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (scroll) {
+              final ctx = _featureKey.currentContext;
+              if (ctx == null) return false;
+              final box = ctx.findRenderObject() as RenderBox;
+              final pos = box.localToGlobal(Offset.zero).dy;
+              final viewportHeight = MediaQuery.of(context).size.height;
+              if (pos < viewportHeight * 0.9) {
+                // Mark all features as eligible to reveal based on scroll position
+                setState(() {});
+              }
+              return false;
+            },
+            child: hasPackage
+                ? SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildAnimatedSection(
+                          start: 0.0,
+                          end: 0.4,
+                          child: _buildHeader(selectedPackage?.name ?? 'Paket Aktif', theme, daysLeft, selectedDuration, dueDate, progress, accentColor, context),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      _buildAnimatedSection(
-                        start: 0.35,
-                        end: 0.9,
-                        child: _PrePurchaseCard(
-                          title: 'Langkah cepat',
-                          items: const [
-                            'Pilih paket yang sesuai kebutuhan timmu.',
-                            'Hubungkan channel chat utama dan atur bot.',
-                            'Mulai kirimkan broadcast atau quick reply ke pelanggan.',
-                          ],
-                          accent: accentColor,
+                        const SizedBox(height: 12),
+                        _buildAnimatedSection(
+                          start: 0.2,
+                          end: 0.6,
+                          child: _buildPackageActions(context, accentColor),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 18),
+                        _buildAnimatedSection(
+                          start: 0.35,
+                          end: 0.9,
+                          child: _buildFeatureSection(selectedPackage?.features ?? [], accentColor),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildAnimatedSection(
+                          start: 0.0,
+                          end: 0.4,
+                          child: _buildPrePurchaseHero(accentColor, theme),
+                        ),
+                        const SizedBox(height: 18),
+                        _buildAnimatedSection(
+                          start: 0.2,
+                          end: 0.65,
+                          child: _PrePurchaseCard(
+                            title: 'Kenapa harus upgrade?',
+                            items: const [
+                              'Balas otomatis 24/7 tanpa kehilangan sentuhan personal.',
+                              'Bot siap pakai untuk alur chat, FAQ, dan broadcast.',
+                              'Laporan ringkas untuk pantau performa tim dan pesan.',
+                            ],
+                            accent: accentColor,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _buildAnimatedSection(
+                          start: 0.35,
+                          end: 0.9,
+                          child: _PrePurchaseCard(
+                            title: 'Langkah cepat',
+                            items: const [
+                              'Pilih paket yang sesuai kebutuhan timmu.',
+                              'Hubungkan channel chat utama dan atur bot.',
+                              'Mulai kirimkan broadcast atau quick reply ke pelanggan.',
+                            ],
+                            accent: accentColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+          ),
         ),
       ),
     );
@@ -144,10 +209,6 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
     required double end,
     required Widget child,
   }) {
-    final fade = CurvedAnimation(
-      parent: _entranceController,
-      curve: Interval(start, end, curve: Curves.easeOut),
-    );
     final slide = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,
@@ -157,6 +218,29 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
         curve: Interval(start, end, curve: Curves.easeOutBack),
       ),
     );
+    return SlideTransition(
+      position: slide,
+      child: child,
+    );
+  }
+
+  Widget _buildPillAnimated({required int index, required Widget child}) {
+    final double start = 0.15 + (index * 0.08);
+    final double end = (start + 0.4).clamp(0, 1);
+    final Animation<double> fade = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(start, end, curve: Curves.easeOut),
+    );
+    final Animation<Offset> slide = Tween<Offset>(
+      begin: const Offset(0.1, 0),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: Interval(start, end, curve: Curves.easeOutCubic),
+      ),
+    );
+
     return FadeTransition(
       opacity: fade,
       child: SlideTransition(
@@ -187,20 +271,36 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Paket $packageName',
+          TypingText(
+            text: 'Paket $packageName',
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: Colors.white,
             ),
+            duration: const Duration(milliseconds: 900),
+            delay: const Duration(milliseconds: 80),
           ),
           const SizedBox(height: 4),
-          Text(
-            'Atur dan cek status paket langganan Anda',
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.9),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 650),
+            curve: Curves.easeOut,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 8 * (1 - value)),
+                  child: child,
+                ),
+              );
+            },
+            child: Text(
+              'Atur dan cek status paket, pantau masa aktif, dan upgrade sesuai kebutuhan bisnismu.',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -214,27 +314,38 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
                 children: [
                   SizedBox(
                     width: pillWidth,
-                    child: _StatPill(
-                      label: 'Durasi Langganan',
-                      value: '$durationMonths Bulan',
-                      accent: accentColor,
+                    child: _buildPillAnimated(
+                      index: 0,
+                      child: _StatPill(
+                        label: 'Durasi Langganan',
+                        value: '$durationMonths Bulan',
+                        accent: accentColor,
+                      ),
                     ),
                   ),
                   SizedBox(
                     width: pillWidth,
-                    child: _StatPill(
-                      label: 'Masa Aktif',
-                      value: '$daysLeft Hari Lagi',
-                      accent: accentColor,
-                      progress: progress,
+                    child: _buildPillAnimated(
+                      index: 1,
+                      child: _StatPill(
+                        label: 'Masa Aktif',
+                        value: '$daysLeft Hari Lagi',
+                        accent: accentColor,
+                        progress: progress,
+                        countValue: daysLeft.toDouble(),
+                        valueSuffix: ' Hari Lagi',
+                      ),
                     ),
                   ),
                   SizedBox(
                     width: pillWidth,
-                    child: _StatPill(
-                      label: 'Jatuh Tempo',
-                      value: dateFormatter.format(dueDate),
-                      accent: accentColor,
+                    child: _buildPillAnimated(
+                      index: 2,
+                      child: _StatPill(
+                        label: 'Jatuh Tempo',
+                        value: dateFormatter.format(dueDate),
+                        accent: accentColor,
+                      ),
                     ),
                   ),
                 ],
@@ -383,6 +494,7 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
     ];
 
     return Container(
+      key: _featureKey,
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
@@ -419,13 +531,36 @@ class _PackageStatusPageState extends State<PackageStatusPage> with SingleTicker
                   final index = entry.key;
                   final text = entry.value;
                   final icon = icons[index % icons.length];
+                  final revealed = _revealedFeatureIndices.contains(index);
                   return SizedBox(
                     width: cardWidth,
-                    child: _FeatureCard(
-                      icon: icon,
-                      title: text.split(' ').take(3).join(' '),
-                      description: text,
-                      accent: accentColor,
+                    child: VisibilityDetector(
+                      key: ValueKey('feature-$index'),
+                      onVisibilityChanged: (visibleInfo) {
+                        if (visibleInfo.visibleFraction > 0 && !_revealedFeatureIndices.contains(index)) {
+                          setState(() => _revealedFeatureIndices.add(index));
+                        }
+                      },
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: revealed ? 1 : 0),
+                        duration: const Duration(milliseconds: 460),
+                        curve: Curves.easeOut,
+                        builder: (context, value, child) {
+                          return Opacity(
+                            opacity: value,
+                            child: Transform.translate(
+                              offset: Offset(-24 * (1 - value), 12 * (1 - value)),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _FeatureCard(
+                          icon: icon,
+                          title: text.split(' ').take(3).join(' '),
+                          description: text,
+                          accent: accentColor,
+                        ),
+                      ),
                     ),
                   );
                 }).toList(),
@@ -443,16 +578,61 @@ class _StatPill extends StatelessWidget {
   final String value;
   final double? progress;
   final Color accent;
+  final double? countValue;
+  final String? valueSuffix;
 
   const _StatPill({
     required this.label,
     required this.value,
     required this.accent,
     this.progress,
+    this.countValue,
+    this.valueSuffix,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textWidget = countValue == null
+        ? Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          )
+        : TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: countValue!.clamp(0, double.maxFinite)),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOut,
+            builder: (context, val, _) {
+              return Text(
+                '${val.floor()}${valueSuffix ?? ''}',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              );
+            },
+          );
+
+    final Widget animatedValue = TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 480),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) {
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(10 * (1 - t), 0),
+            child: child,
+          ),
+        );
+      },
+      child: textWidget,
+    );
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -471,14 +651,7 @@ class _StatPill extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
+          animatedValue,
           if (progress != null) ...[
             const SizedBox(height: 8),
             TweenAnimationBuilder<double>(

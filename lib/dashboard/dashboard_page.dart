@@ -130,24 +130,67 @@ class _DashboardPageState extends State<DashboardPage> {
     DashboardProvider provider,
     PackageTheme packageTheme,
   ) {
-    return BottomNavigationBar(
-      items: [
-        _buildNavItem(Icons.home_filled, 'Beranda', 0, provider.selectedIndex, packageTheme),
-        _buildNavItem(Icons.chat_bubble_outline, 'Obrolan', 1, provider.selectedIndex, packageTheme),
-        _buildNavItem(Icons.article_outlined, 'Laporan', 2, provider.selectedIndex, packageTheme),
-        _buildNavItem(Icons.smart_toy_outlined, 'Bot', 3, provider.selectedIndex, packageTheme),
-        _buildNavItem(Icons.inventory_2_outlined, 'Paket', 4, provider.selectedIndex, packageTheme),
-        _buildNavItem(Icons.person_outline, 'Saya', 5, provider.selectedIndex, packageTheme),
-      ],
-      currentIndex: provider.selectedIndex,
-      onTap: (index) => provider.setSelectedIndex(index),
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      showUnselectedLabels: true,
-      selectedFontSize: 12,
-      unselectedFontSize: 12,
-      selectedItemColor: packageTheme.accent, 
-      unselectedItemColor: Colors.grey[600],
+    const int itemCount = 6;
+    return Container(
+      height: 72,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const double indicatorWidth = 64;
+          final double x = (provider.selectedIndex / (itemCount - 1)) * 2 - 1;
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              IgnorePointer(
+                ignoring: true,
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  alignment: Alignment(x.clamp(-1.0, 1.0), 0),
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 6),
+                    width: indicatorWidth,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: packageTheme.accent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ),
+              BottomNavigationBar(
+                items: [
+                  _buildNavItem(Icons.home_filled, 'Beranda', 0, provider.selectedIndex, packageTheme),
+                  _buildNavItem(Icons.chat_bubble_outline, 'Obrolan', 1, provider.selectedIndex, packageTheme),
+                  _buildNavItem(Icons.article_outlined, 'Laporan', 2, provider.selectedIndex, packageTheme),
+                  _buildNavItem(Icons.smart_toy_outlined, 'Bot', 3, provider.selectedIndex, packageTheme),
+                  _buildNavItem(Icons.inventory_2_outlined, 'Paket', 4, provider.selectedIndex, packageTheme),
+                  _buildNavItem(Icons.person_outline, 'Saya', 5, provider.selectedIndex, packageTheme),
+                ],
+                currentIndex: provider.selectedIndex,
+                onTap: (index) => provider.setSelectedIndex(index),
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                showUnselectedLabels: true,
+                selectedFontSize: 12,
+                unselectedFontSize: 12,
+                selectedItemColor: Colors.white,
+                unselectedItemColor: Colors.grey[600],
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -160,16 +203,13 @@ class _DashboardPageState extends State<DashboardPage> {
   ) {
     return BottomNavigationBarItem(
       label: label,
-      icon: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 48, height: 32,
-        decoration: BoxDecoration(
-          color: selectedIndex == index ? packageTheme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Icon(
-          icon,
-          color: selectedIndex == index ? Colors.white : Colors.grey[600],
+      icon: SizedBox(
+        width: 56,
+        child: Center(
+          child: Icon(
+            icon,
+            color: selectedIndex == index ? Colors.white : Colors.grey[600],
+          ),
         ),
       ),
     );

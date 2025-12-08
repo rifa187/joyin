@@ -98,8 +98,9 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       if (context.mounted) {
         String message = 'Gagal mengubah password.';
-        if (e.toString().contains('wrong-password')) message = 'Password lama anda salah.';
-        else if (e.toString().contains('weak-password')) message = 'Password baru terlalu lemah.';
+        if (e.toString().contains('wrong-password')) {
+          message = 'Password lama anda salah.';
+        } else if (e.toString().contains('weak-password')) message = 'Password baru terlalu lemah.';
         _showSnackBar(context, message, isError: true);
       }
       return false;

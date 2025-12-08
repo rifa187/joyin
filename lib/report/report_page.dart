@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/widgets/locked_feature_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import '../package/package_theme.dart';
+import '../widgets/typing_text.dart';
 
 class ReportPage extends StatefulWidget {
   const ReportPage({super.key});
@@ -13,12 +15,22 @@ class ReportPage extends StatefulWidget {
   State<ReportPage> createState() => _ReportPageState();
 }
 
-class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateMixin {
+class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
   late final AnimationController _entranceController;
-  late final Animation<double> _cardFade;
   late final Animation<double> _cardSlide;
   late final Animation<double> _contentFade;
   late final Animation<Offset> _contentSlide;
+  late final AnimationController _chartController;
+  bool _chartVisible = false;
+  static const List<FlSpot> _interactionSpots = [
+    FlSpot(0, 1),
+    FlSpot(1, 1.5),
+    FlSpot(2, 1.2),
+    FlSpot(3, 1.9),
+    FlSpot(4, 1.5),
+    FlSpot(5, 2.2),
+    FlSpot(6, 2.0),
+  ];
 
   @override
   void initState() {
@@ -30,10 +42,6 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
     _cardSlide = CurvedAnimation(
       parent: _entranceController,
       curve: const Interval(0.2, 1, curve: Curves.easeOutBack),
-    );
-    _cardFade = CurvedAnimation(
-      parent: _entranceController,
-      curve: const Interval(0.2, 1, curve: Curves.easeOut),
     );
     _contentSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
@@ -47,6 +55,10 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
     _contentFade = CurvedAnimation(
       parent: _entranceController,
       curve: const Interval(0.35, 1, curve: Curves.easeOut),
+    );
+    _chartController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
     );
   }
 
@@ -68,44 +80,72 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Laporan',
+          TypingText(
+            text: 'Laporan',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
+            duration: const Duration(milliseconds: 900),
+            delay: const Duration(milliseconds: 80),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Pantau performa tim & bot',
-            style: GoogleFonts.poppins(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
-              height: 1.5,
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 650),
+            curve: Curves.easeOut,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 10 * (1 - value)),
+                  child: child,
+                ),
+              );
+            },
+            child: Text(
+              'Pantau performa tim & bot, temukan tren interaksi, dan ambil keputusan lebih cepat.',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
           ),
           const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.16),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'Insight',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
+          FadeTransition(
+            opacity: _contentFade,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.08, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: _entranceController,
+                curve: const Interval(0.25, 0.8, curve: Curves.easeOutCubic),
+              )),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.3)),
                 ),
-              ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Insight',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -130,6 +170,7 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
   @override
   void dispose() {
     _entranceController.dispose();
+    _chartController.dispose();
     super.dispose();
   }
 
@@ -159,41 +200,38 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
               _buildHeroSection(topPadding, packageTheme),
               Transform.translate(
                 offset: const Offset(0, -80),
-                child: FadeTransition(
-                  opacity: _cardFade,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.2),
-                      end: Offset.zero,
-                    ).animate(_cardSlide),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(36),
-                        boxShadow: [
-                          BoxShadow(
-                            color: packageTheme.accent.withOpacity(0.12),
-                            blurRadius: 28,
-                            offset: const Offset(0, 16),
-                          ),
-                        ],
-                      ),
-                      child: hasPackage
-                          ? FadeTransition(
-                              opacity: _contentFade,
-                              child: SlideTransition(
-                                position: _contentSlide,
-                                child: _buildReportBody(packageTheme.accent, secondaryColor),
-                              ),
-                            )
-                          : const LockedFeatureWidget(
-                              title: 'Fitur Terkunci',
-                              message: 'Upgrade paketmu untuk membuka halaman Laporan.',
-                              icon: Icons.article_outlined,
-                            ),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.2),
+                    end: Offset.zero,
+                  ).animate(_cardSlide),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(36),
+                      boxShadow: [
+                        BoxShadow(
+                          color: packageTheme.accent.withOpacity(0.12),
+                          blurRadius: 28,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
                     ),
+                    child: hasPackage
+                        ? FadeTransition(
+                            opacity: _contentFade,
+                            child: SlideTransition(
+                              position: _contentSlide,
+                              child: _buildReportBody(packageTheme.accent, secondaryColor),
+                            ),
+                          )
+                        : const LockedFeatureWidget(
+                            title: 'Fitur Terkunci',
+                            message: 'Upgrade paketmu untuk membuka halaman Laporan.',
+                            icon: Icons.article_outlined,
+                          ),
                   ),
                 ),
               ),
@@ -252,15 +290,38 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: cards.map((c) {
-            return SizedBox(
-              width: itemWidth,
-              child: _buildInfoCard(
-                title: c.$1,
-                value: c.$2,
-                subtitle: c.$3,
-                accent: accent,
-                icon: c.$4,
+          children: cards.asMap().entries.map((entry) {
+            final index = entry.key;
+            final c = entry.value;
+            final double start = 0.2 + (index * 0.08);
+            final double end = (start + 0.4).clamp(0, 1);
+            final Animation<double> fade = CurvedAnimation(
+              parent: _entranceController,
+              curve: Interval(start, end, curve: Curves.easeOut),
+            );
+            final Animation<Offset> slide = Tween<Offset>(
+              begin: const Offset(0.12, 0),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: _entranceController,
+                curve: Interval(start, end, curve: Curves.easeOutCubic),
+              ),
+            );
+            return FadeTransition(
+              opacity: fade,
+              child: SlideTransition(
+                position: slide,
+                child: SizedBox(
+                  width: itemWidth,
+                  child: _buildInfoCard(
+                    title: c.$1,
+                    value: c.$2,
+                    subtitle: c.$3,
+                    accent: accent,
+                    icon: c.$4,
+                  ),
+                ),
               ),
             );
           }).toList(),
@@ -270,6 +331,10 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
   }
 
   Widget _buildChartCard(Color secondaryColor, Color accent) {
+    final Animation<double> chartAnim = CurvedAnimation(
+      parent: _chartController,
+      curve: Curves.easeOutCubic,
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -297,32 +362,65 @@ class _ReportPageState extends State<ReportPage> with SingleTickerProviderStateM
           const SizedBox(height: 16),
           SizedBox(
             height: 200,
-            child: LineChart(
-              LineChartData(
-                borderData: FlBorderData(show: false),
-                gridData: FlGridData(show: false),
-                titlesData: FlTitlesData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 1),
-                      FlSpot(1, 1.5),
-                      FlSpot(2, 1.2),
-                      FlSpot(3, 1.9),
-                      FlSpot(4, 1.5),
-                      FlSpot(5, 2.2),
-                      FlSpot(6, 2.0),
-                    ],
-                    isCurved: true,
-                    color: accent,
-                    barWidth: 4,
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: accent.withOpacity(0.15),
+            child: VisibilityDetector(
+              key: const Key('chart-visibility'),
+              onVisibilityChanged: (info) {
+                if (info.visibleFraction > 0.25 && !_chartVisible) {
+                  _chartVisible = true;
+                  _chartController.forward(from: 0);
+                } else if (info.visibleFraction < 0.05 && _chartVisible) {
+                  _chartVisible = false;
+                  _chartController.reset();
+                }
+              },
+              child: AnimatedBuilder(
+                animation: chartAnim,
+                builder: (context, _) {
+                  final double t = chartAnim.value.clamp(0, 1);
+                  final double maxX = _interactionSpots.last.x;
+                  final double sweepX = maxX * t;
+
+                  // Sweep along X axis: include full points up to sweep, then add an interpolated point.
+                  final List<FlSpot> animatedSpots = [];
+                  for (int i = 0; i < _interactionSpots.length; i++) {
+                    final FlSpot current = _interactionSpots[i];
+                    if (current.x <= sweepX) {
+                      animatedSpots.add(current);
+                      continue;
+                    }
+                    if (animatedSpots.isEmpty) {
+                      animatedSpots.add(FlSpot(0, _interactionSpots.first.y * t));
+                    } else {
+                      final FlSpot prev = animatedSpots.last;
+                      final double span = (current.x - prev.x).clamp(0.0001, double.infinity);
+                      final double ratio = ((sweepX - prev.x) / span).clamp(0, 1);
+                      final double interpY = prev.y + (current.y - prev.y) * ratio;
+                      animatedSpots.add(FlSpot(sweepX, interpY));
+                    }
+                    break;
+                  }
+
+                  return LineChart(
+                    LineChartData(
+                      borderData: FlBorderData(show: false),
+                      gridData: FlGridData(show: false),
+                      titlesData: FlTitlesData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: animatedSpots,
+                          isCurved: true,
+                          color: accent,
+                          barWidth: 4,
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: accent.withOpacity(0.12 + (0.08 * t)),
+                          ),
+                          dotData: FlDotData(show: false),
+                        ),
+                      ],
                     ),
-                    dotData: FlDotData(show: false),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),

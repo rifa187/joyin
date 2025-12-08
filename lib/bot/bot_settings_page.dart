@@ -4,6 +4,7 @@ import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/widgets/locked_feature_widget.dart';
 import 'package:provider/provider.dart';
 import '../package/package_theme.dart';
+import '../widgets/typing_text.dart';
 
 class BotSettingsPage extends StatefulWidget {
   const BotSettingsPage({super.key});
@@ -21,7 +22,6 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
   final TextEditingController _outOfHoursMsgController = TextEditingController();
 
   late final AnimationController _entranceController;
-  late final Animation<double> _cardFade;
   late final Animation<double> _cardSlide;
   late final Animation<double> _contentFade;
   late final Animation<Offset> _contentSlide;
@@ -50,10 +50,6 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
     _cardSlide = CurvedAnimation(
       parent: _entranceController,
       curve: const Interval(0.2, 1, curve: Curves.easeOutBack),
-    );
-    _cardFade = CurvedAnimation(
-      parent: _entranceController,
-      curve: const Interval(0.2, 1, curve: Curves.easeOut),
     );
     _contentSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
@@ -107,41 +103,38 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
               _buildHeroSection(topPadding, packageTheme),
               Transform.translate(
                 offset: const Offset(0, -80),
-                child: FadeTransition(
-                  opacity: _cardFade,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.2),
-                      end: Offset.zero,
-                    ).animate(_cardSlide),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(36),
-                        boxShadow: [
-                          BoxShadow(
-                            color: packageTheme.accent.withOpacity(0.12),
-                            blurRadius: 28,
-                            offset: const Offset(0, 16),
-                          ),
-                        ],
-                      ),
-                      child: hasPackage
-                          ? FadeTransition(
-                              opacity: _contentFade,
-                              child: SlideTransition(
-                                position: _contentSlide,
-                                child: _buildBotBody(packageTheme),
-                              ),
-                            )
-                          : const LockedFeatureWidget(
-                              title: 'Fitur Terkunci',
-                              message: 'Upgrade paketmu untuk membuka pengaturan bot.',
-                              icon: Icons.smart_toy_outlined,
-                            ),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.2),
+                    end: Offset.zero,
+                  ).animate(_cardSlide),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(36),
+                      boxShadow: [
+                        BoxShadow(
+                          color: packageTheme.accent.withOpacity(0.12),
+                          blurRadius: 28,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
                     ),
+                    child: hasPackage
+                        ? FadeTransition(
+                            opacity: _contentFade,
+                            child: SlideTransition(
+                              position: _contentSlide,
+                              child: _buildBotBody(packageTheme),
+                            ),
+                          )
+                        : const LockedFeatureWidget(
+                            title: 'Fitur Terkunci',
+                            message: 'Upgrade paketmu untuk membuka pengaturan bot.',
+                            icon: Icons.smart_toy_outlined,
+                          ),
                   ),
                 ),
               ),
@@ -171,21 +164,37 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Pengaturan Bot',
+          TypingText(
+            text: 'Pengaturan Bot',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
+            duration: const Duration(milliseconds: 900),
+            delay: const Duration(milliseconds: 80),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Atur auto-reply, jam kerja, dan gaya percakapan bot.',
-            style: GoogleFonts.poppins(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
-              height: 1.5,
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 650),
+            curve: Curves.easeOut,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 10 * (1 - value)),
+                  child: child,
+                ),
+              );
+            },
+            child: Text(
+              'Atur auto-reply, jam kerja, dan gaya percakapan bot supaya respon tetap konsisten 24/7.',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
           ),
         ],
@@ -556,7 +565,7 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
           ),
           const SizedBox(height: 4),
           Text(
-            'Gaya: ${_selectedTone} - Delay: ${_replyDelay.round()} dtk',
+            'Gaya: $_selectedTone - Delay: ${_replyDelay.round()} dtk',
             style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.85), fontSize: 12.5),
           ),
         ],
@@ -660,14 +669,14 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
     return Switch(
       value: value,
       onChanged: onChanged,
-      trackColor: MaterialStateProperty.resolveWith<Color?>(
-        (states) => states.contains(MaterialState.selected) ? accent : Colors.grey.shade300,
+      trackColor: WidgetStateProperty.resolveWith<Color?>(
+        (states) => states.contains(WidgetState.selected) ? accent : Colors.grey.shade300,
       ),
-      thumbColor: MaterialStateProperty.resolveWith<Color?>(
-        (states) => states.contains(MaterialState.selected) ? Colors.white : Colors.grey.shade50,
+      thumbColor: WidgetStateProperty.resolveWith<Color?>(
+        (states) => states.contains(WidgetState.selected) ? Colors.white : Colors.grey.shade50,
       ),
-      trackOutlineColor: MaterialStateProperty.resolveWith<Color?>(
-        (states) => states.contains(MaterialState.selected) ? accent.withOpacity(0.4) : Colors.transparent,
+      trackOutlineColor: WidgetStateProperty.resolveWith<Color?>(
+        (states) => states.contains(WidgetState.selected) ? accent.withOpacity(0.4) : Colors.transparent,
       ),
     );
   }

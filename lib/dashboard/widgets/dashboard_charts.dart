@@ -69,8 +69,13 @@ class ChartGridPainter extends CustomPainter {
 class PieChartPainter extends CustomPainter {
   final List<PieChartData> data;
   final double strokeWidth;
+  final double progress;
 
-  PieChartPainter({required this.data, this.strokeWidth = 24});
+  PieChartPainter({
+    required this.data,
+    this.strokeWidth = 24,
+    this.progress = 1,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -79,7 +84,7 @@ class PieChartPainter extends CustomPainter {
     double startAngle = -math.pi / 2;
 
     for (final slice in data) {
-      final sweepAngle = (slice.value / 100) * 2 * math.pi;
+      final sweepAngle = (slice.value / 100) * 2 * math.pi * progress;
       final paint = Paint()
         ..color = slice.color
         ..style = PaintingStyle.stroke
@@ -97,5 +102,10 @@ class PieChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    if (oldDelegate is! PieChartPainter) return true;
+    return oldDelegate.data != data ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.progress != progress;
+  }
 }

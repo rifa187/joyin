@@ -4,6 +4,7 @@ import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/widgets/locked_feature_widget.dart';
 import 'package:provider/provider.dart';
 import '../package/package_theme.dart';
+import '../widgets/typing_text.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -12,9 +13,8 @@ class ChatPage extends StatefulWidget {
   State<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin {
+class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   late final AnimationController _entranceController;
-  late final Animation<double> _cardFade;
   late final Animation<double> _cardSlide;
   late final Animation<double> _contentFade;
   late final Animation<Offset> _contentSlide;
@@ -29,10 +29,6 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
     _cardSlide = CurvedAnimation(
       parent: _entranceController,
       curve: const Interval(0.2, 1, curve: Curves.easeOutBack),
-    );
-    _cardFade = CurvedAnimation(
-      parent: _entranceController,
-      curve: const Interval(0.2, 1, curve: Curves.easeOut),
     );
     _contentSlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
@@ -82,41 +78,38 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
               _buildHeroSection(topPadding, packageTheme),
               Transform.translate(
                 offset: const Offset(0, -80),
-                child: FadeTransition(
-                  opacity: _cardFade,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.2),
-                      end: Offset.zero,
-                    ).animate(_cardSlide),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(36),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accent.withOpacity(0.12),
-                            blurRadius: 28,
-                            offset: const Offset(0, 16),
-                          ),
-                        ],
-                      ),
-                      child: hasPackage
-                          ? FadeTransition(
-                              opacity: _contentFade,
-                              child: SlideTransition(
-                                position: _contentSlide,
-                                child: _buildChatBody(accent),
-                              ),
-                            )
-                          : const LockedFeatureWidget(
-                              title: 'Fitur Terkunci',
-                              message: 'Upgrade paketmu untuk membuka halaman Obrolan dan fitur terkait.',
-                              icon: Icons.chat_bubble_outline,
-                            ),
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.2),
+                    end: Offset.zero,
+                  ).animate(_cardSlide),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(36),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withOpacity(0.12),
+                          blurRadius: 28,
+                          offset: const Offset(0, 16),
+                        ),
+                      ],
                     ),
+                    child: hasPackage
+                        ? FadeTransition(
+                            opacity: _contentFade,
+                            child: SlideTransition(
+                              position: _contentSlide,
+                              child: _buildChatBody(accent),
+                            ),
+                          )
+                        : const LockedFeatureWidget(
+                            title: 'Fitur Terkunci',
+                            message: 'Upgrade paketmu untuk membuka halaman Obrolan dan fitur terkait.',
+                            icon: Icons.chat_bubble_outline,
+                          ),
                   ),
                 ),
               ),
@@ -146,21 +139,37 @@ class _ChatPageState extends State<ChatPage> with SingleTickerProviderStateMixin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Obrolan',
+          TypingText(
+            text: 'Obrolan',
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.w800,
             ),
+            duration: const Duration(milliseconds: 900),
+            delay: const Duration(milliseconds: 80),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Pantau percakapan pelanggan dan tetap responsif di semua channel.',
-            style: GoogleFonts.poppins(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 14,
-              height: 1.5,
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: const Duration(milliseconds: 650),
+            curve: Curves.easeOut,
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, 10 * (1 - value)),
+                  child: child,
+                ),
+              );
+            },
+            child: Text(
+              'Pantau percakapan pelanggan, balas cepat, dan sinkronkan semua channel di satu tempat.',
+              style: GoogleFonts.poppins(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+                height: 1.5,
+              ),
             ),
           ),
         ],

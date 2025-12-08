@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -17,8 +18,56 @@ import '../screens/pilih_paket_screen.dart';
 import 'about_page.dart';
 import '../package/package_theme.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage>
+    with TickerProviderStateMixin {
+  late final AnimationController _headerController;
+  late final Animation<Offset> _headerSlide;
+  late final AnimationController _gradientController;
+  late final AnimationController _contentController;
+
+  @override
+  void initState() {
+    super.initState();
+    _headerController = AnimationController(
+      duration: const Duration(milliseconds: 450),
+      vsync: this,
+    );
+    _headerSlide = Tween<Offset>(
+      begin: const Offset(0, -0.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _headerController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    _headerController.forward();
+
+    _gradientController = AnimationController(
+      duration: const Duration(seconds: 6),
+      vsync: this,
+    );
+
+    _contentController = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _headerController.dispose();
+    _gradientController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
 
   // Fungsi Logout (Tambahan - Bisa diaktifkan nanti)
   void _handleLogout(BuildContext context) {
@@ -71,6 +120,54 @@ class ProfilePage extends StatelessWidget {
         final String? packageName = packageProvider.currentUserPackage;
         final PackageTheme packageTheme = PackageThemeResolver.resolve(packageName);
         final bool hasPackage = packageName != null && packageName.isNotEmpty;
+        final bool animateGradient = packageTheme.headerGradient.toSet().length > 1;
+        final Animation<double> subscriptionFade = CurvedAnimation(
+          parent: _contentController,
+          curve: const Interval(0.0, 0.55, curve: Curves.easeOut),
+        );
+        final Animation<Offset> subscriptionSlide = Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _contentController,
+            curve: const Interval(0.0, 0.55, curve: Curves.easeOutCubic),
+          ),
+        );
+
+        final Animation<double> quickFade = CurvedAnimation(
+          parent: _contentController,
+          curve: const Interval(0.25, 0.75, curve: Curves.easeOut),
+        );
+        final Animation<Offset> quickSlide = Tween<Offset>(
+          begin: const Offset(0, 0.06),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _contentController,
+            curve: const Interval(0.25, 0.75, curve: Curves.easeOutCubic),
+          ),
+        );
+
+        final Animation<double> menuFade = CurvedAnimation(
+          parent: _contentController,
+          curve: const Interval(0.4, 0.95, curve: Curves.easeOut),
+        );
+        final Animation<Offset> menuSlide = Tween<Offset>(
+          begin: const Offset(0.08, 0),
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(
+            parent: _contentController,
+            curve: const Interval(0.4, 0.95, curve: Curves.easeOutCubic),
+          ),
+        );
+
+        if (animateGradient && !_gradientController.isAnimating) {
+          _gradientController.repeat(reverse: true);
+        } else if (!animateGradient && _gradientController.isAnimating) {
+          _gradientController.stop();
+        }
 
         return Scaffold(
           backgroundColor: packageTheme.backgroundGradient.first,
@@ -78,174 +175,216 @@ class ProfilePage extends StatelessWidget {
             child: Column(
               children: [
                 // --- HEADER (GRADIENT) ---
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: packageTheme.headerGradient,
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
+                SlideTransition(
+                  position: _headerSlide,
+                  child: AnimatedBuilder(
+                    animation: _gradientController,
+                    builder: (context, child) {
+                      final double shift = animateGradient
+                          ? lerpDouble(-0.6, 0.6, _gradientController.value) ?? 0
+                          : 0;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: packageTheme.headerGradient,
+                            begin: Alignment(-1 + shift, 0),
+                            end: Alignment(1 + shift, 0),
+                          ),
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Judul Halaman & Logout
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Akun Saya',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            // Ikon Logout
+                            Material(
+                              color: Colors.white.withOpacity(0.12),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () => _handleLogout(context),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: Icon(Icons.logout, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Info User (Foto & Nama)
+                        Row(
+                          children: [
+                            // FOTO PROFIL (Base64 Ready)
+                            // Menggunakan Widget ProfileAvatar yang sudah kita buat
+                            ProfileAvatar(
+                              photoUrl: user?.photoUrl,
+                              isLoading: false, // Tidak ada loading upload di sini
+                              onEditTap: () {
+                                // Shortcut ke Edit Profil saat foto diklik
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                                );
+                              }, 
+                            ),
+                            
+                            const SizedBox(width: 16),
+                            
+                            // Teks Nama & Email
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    user?.displayName ?? 'Nama Pengguna',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    user?.email ?? 'email@contoh.com',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white.withAlpha((255 * 0.9).round()),
+                                      fontSize: 14,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Judul Halaman & Logout
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Akun Saya',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Ikon Logout
-                          IconButton(
-                            onPressed: () => _handleLogout(context),
-                            icon: const Icon(Icons.logout, color: Colors.white),
-                            tooltip: 'Keluar',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Info User (Foto & Nama)
-                      Row(
-                        children: [
-                          // FOTO PROFIL (Base64 Ready)
-                          // Menggunakan Widget ProfileAvatar yang sudah kita buat
-                          ProfileAvatar(
-                            photoUrl: user?.photoUrl,
-                            isLoading: false, // Tidak ada loading upload di sini
-                            onEditTap: () {
-                              // Shortcut ke Edit Profil saat foto diklik
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                              );
-                            }, 
-                          ),
-                          
-                          const SizedBox(width: 16),
-                          
-                          // Teks Nama & Email
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user?.displayName ?? 'Nama Pengguna',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  user?.email ?? 'email@contoh.com',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white.withAlpha((255 * 0.9).round()),
-                                    fontSize: 14,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
                 // --- Subscription Status Card ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    shadowColor: packageTheme.accent.withOpacity(0.12),
-                    child: hasPackage
-                        ? _buildSubscriptionInfo(context, packageProvider.currentUserPackage!)
-                        : _buildNoSubscription(context),
+                FadeTransition(
+                  opacity: subscriptionFade,
+                  child: SlideTransition(
+                    position: subscriptionSlide,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shadowColor: packageTheme.accent.withOpacity(0.12),
+                        child: hasPackage
+                            ? _buildSubscriptionInfo(context, packageProvider.currentUserPackage!)
+                            : _buildNoSubscription(context),
+                      ),
+                    ),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
                 // --- Quick Actions ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildQuickActions(context, packageTheme),
+                FadeTransition(
+                  opacity: quickFade,
+                  child: SlideTransition(
+                    position: quickSlide,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildQuickActions(context, packageTheme),
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 20),
 
                 // --- MENU LIST ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: Column(
-                      children: [
-                        _buildMenuItem(
-                          context,
-                          icon: Icons.card_giftcard_outlined,
-                          text: 'Kode Referral',
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ReferralPage()),
-                          ),
-                          accent: packageTheme.accent,
+                FadeTransition(
+                  opacity: menuFade,
+                  child: SlideTransition(
+                    position: menuSlide,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Column(
+                          children: [
+                            _buildAnimatedMenuItem(
+                              context,
+                              index: 0,
+                              icon: Icons.card_giftcard_outlined,
+                              text: 'Kode Referral',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const ReferralPage()),
+                              ),
+                              accent: packageTheme.accent,
+                            ),
+                            const Divider(height: 1),
+                            _buildAnimatedMenuItem(
+                              context,
+                              index: 1,
+                              icon: Icons.person_outline,
+                              text: 'Edit Profil',
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())),
+                              accent: packageTheme.accent,
+                            ),
+                            const Divider(height: 1),
+                            _buildAnimatedMenuItem(
+                              context,
+                              index: 2,
+                              icon: Icons.settings_outlined,
+                              text: 'Pengaturan',
+                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
+                              accent: packageTheme.accent,
+                            ),
+                            const Divider(height: 1),
+                            _buildAnimatedMenuItem(
+                              context,
+                              index: 3,
+                              icon: Icons.help_outline,
+                              text: 'Bantuan',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const TutorialPage()),
+                              ),
+                              accent: packageTheme.accent,
+                            ),
+                            const Divider(height: 1),
+                            _buildAnimatedMenuItem(
+                              context,
+                              index: 4,
+                              icon: Icons.info_outline,
+                              text: 'Tentang Aplikasi',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const AboutPage()),
+                              ),
+                              accent: packageTheme.accent,
+                            ),
+                          ],
                         ),
-                        const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.person_outline, 
-                          text: 'Edit Profil',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())),
-                          accent: packageTheme.accent,
-                        ),
-                        const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.settings_outlined, 
-                          text: 'Pengaturan',
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
-                          accent: packageTheme.accent,
-                        ),
-                        const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.help_outline, 
-                          text: 'Bantuan',
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TutorialPage()),
-                          ),
-                          accent: packageTheme.accent,
-                        ),
-                        const Divider(height: 1),
-                        _buildMenuItem(
-                          context, 
-                          icon: Icons.info_outline, 
-                          text: 'Tentang Aplikasi',
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const AboutPage()),
-                          ),
-                          accent: packageTheme.accent,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -393,6 +532,44 @@ class ProfilePage extends StatelessWidget {
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildAnimatedMenuItem(
+    BuildContext context, {
+    required int index,
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+    required Color accent,
+  }) {
+    final double start = 0.45 + (index * 0.06);
+    final double end = (start + 0.35).clamp(0, 1);
+    final Animation<double> fade = CurvedAnimation(
+      parent: _contentController,
+      curve: Interval(start, end, curve: Curves.easeOut),
+    );
+    final Animation<Offset> slide = Tween<Offset>(
+      begin: const Offset(0.06, 0),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _contentController,
+        curve: Interval(start, end, curve: Curves.easeOutCubic),
+      ),
+    );
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(
+        position: slide,
+        child: _buildMenuItem(
+          context,
+          icon: icon,
+          text: text,
+          onTap: onTap,
+          accent: accent,
+        ),
+      ),
     );
   }
 

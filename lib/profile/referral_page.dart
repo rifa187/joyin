@@ -479,7 +479,7 @@ class _ReferralPageState extends State<ReferralPage> {
   }
 
   String _buildReferralCode(User? user) {
-    final seed = user?.uid?.isNotEmpty == true ? user!.uid : DateTime.now().millisecondsSinceEpoch.toString();
+    final seed = user?.uid.isNotEmpty == true ? user!.uid : DateTime.now().millisecondsSinceEpoch.toString();
     final code = _generateCodeFromSeed(seed, length: 6);
     return 'JYN-$code';
   }

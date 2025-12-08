@@ -301,7 +301,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                     _DetailRow(label: 'Status Pembayaran', value: order.paymentStatus),
                     _DetailRow(
                       label: 'Waktu',
-                      value: '${order.createdAt.toIso8601String().substring(0, 16)}',
+                      value: order.createdAt.toIso8601String().substring(0, 16),
                     ),
                     const SizedBox(height: 12),
                     Container(

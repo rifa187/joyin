@@ -446,7 +446,7 @@ class PilihPaketScreen extends StatelessWidget {
                       ),
                     ),
                   )
-                  .toList(),
+                  ,
               const SizedBox(height: 16),
               Row(
                 children: [
