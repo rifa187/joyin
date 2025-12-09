@@ -5,6 +5,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import '../core/env.dart';
+import '../services/api_client.dart';
+import '../services/auth_api_service.dart';
+import '../services/user_api_service.dart';
 
 // IMPORT FILE KAMU
 import '../auth/firebase_auth_service.dart';
@@ -22,11 +26,19 @@ class AuthProvider with ChangeNotifier {
   String? _verificationId; // Untuk OTP
 
   final FirebaseAuthService _authService = FirebaseAuthService();
+  ApiClient? _apiClient;
+  AuthApiService? _authApi;
+  UserApiService? _userApi;
 
   // --- 1. LOGIN EMAIL & PASSWORD ---
   Future<void> signIn(String email, String password, BuildContext context) async {
     _setLoading(true);
     try {
+      if (_useBackendAuth) {
+        await _handleBackendLogin(email, password, context);
+        return;
+      }
+
       firebase_auth.UserCredential credential = 
           await _authService.signInWithEmailAndPassword(email, password);
 
@@ -303,6 +315,51 @@ class AuthProvider with ChangeNotifier {
         backgroundColor: isError ? AppColors.error : Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  bool get _useBackendAuth => Env.useBackendAuth && Env.apiBaseUrl.isNotEmpty;
+
+  void _ensureApi() {
+    if (_apiClient != null) return;
+    if (Env.apiBaseUrl.isEmpty) {
+      throw Exception('API_BASE_URL belum diset. Tambahkan --dart-define=API_BASE_URL=https://api.example.com');
+    }
+    _apiClient = ApiClient(Env.apiBaseUrl);
+    _authApi = AuthApiService(_apiClient!);
+    _userApi = UserApiService(_apiClient!);
+  }
+
+  Future<void> _handleBackendLogin(String email, String password, BuildContext context) async {
+    _ensureApi();
+    final authApi = _authApi!;
+    final userApi = _userApi!;
+    final prefs = await SharedPreferences.getInstance();
+
+    final token = await authApi.login(email, password);
+    _apiClient!.setToken(token);
+    await prefs.setString('auth_token', token);
+
+    final userJson = await userApi.fetchMe();
+    final mappedUser = app_model.User(
+      uid: (userJson['id'] ?? userJson['uid'] ?? '') as String,
+      email: userJson['email'] as String?,
+      displayName: userJson['name'] as String? ?? userJson['fullName'] as String?,
+      phoneNumber: userJson['phone'] as String? ?? userJson['phoneNumber'] as String?,
+      photoUrl: userJson['photoUrl'] as String? ?? userJson['avatar'] as String?,
+      dateOfBirth: userJson['dateOfBirth'] as String?,
+      hasPurchasedPackage: (userJson['hasPurchasedPackage'] ?? userJson['isSubscribed'] ?? false) as bool,
+      isAdmin: (userJson['role'] == 'admin') || (userJson['isAdmin'] == true),
+    );
+
+    if (!context.mounted) return;
+    Provider.of<UserProvider>(context, listen: false).setUser(mappedUser);
+    await prefs.setBool('has_purchased_package', mappedUser.hasPurchasedPackage);
+
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardGate()),
+      (route) => false,
     );
   }
 }
