@@ -41,14 +41,9 @@ dependencies:
   dio: ^5.6.0
   intl: ^0.20.2
   provider: ^6.1.5+1
-  firebase_core: ^2.32.0
-  firebase_auth: ^4.16.0
-  cloud_firestore: ^4.17.5
-  google_sign_in: ^6.2.1
   flutter_secure_storage: ^9.2.4
   url_launcher: ^6.3.0
   image_picker: ^1.2.1
-  firebase_storage: ^11.6.5
   fl_chart: ^1.1.1
   pinput: ^6.0.1
 
