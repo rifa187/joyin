@@ -1,41 +1,48 @@
-import 'dart:convert'; // ✅ PENTING: Untuk Base64 (Gratis)
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 
-// IMPORT FILE KAMU
-import '../auth/firebase_auth_service.dart';
+// SERVICES & MODELS
+import '../services/auth_api_service.dart';
 import '../core/user_model.dart' as app_model;
 import '../providers/user_provider.dart';
 import '../providers/package_provider.dart';
 import '../dashboard/dashboard_gate.dart';
+import '../auth/otp_verification_page.dart'; // We will create this
 import '../core/app_colors.dart';
 
 class AuthProvider with ChangeNotifier {
   // --- STATE ---
   bool _isLoading = false;
   bool get isLoading => _isLoading;
-  
-  String? _verificationId; // Untuk OTP
 
-  final FirebaseAuthService _authService = FirebaseAuthService();
+  final AuthApiService _apiService = AuthApiService();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   // --- 1. LOGIN EMAIL & PASSWORD ---
-  Future<void> signIn(String email, String password, BuildContext context) async {
+  Future<void> signIn(
+      String email, String password, BuildContext context) async {
     _setLoading(true);
     try {
-      firebase_auth.UserCredential credential = 
-          await _authService.signInWithEmailAndPassword(email, password);
+      final data = await _apiService.login(email, password);
 
-      if (credential.user != null && context.mounted) {
-        await _fetchUserDataAndNavigate(credential.user!.uid, context);
+      print('📦 LOGIN RESPONSE DATA: $data'); // Debug print
+
+      if (context.mounted) {
+        // PERBAIKAN: Backend mengembalikan data flat (termasuk token & user fields di root data)
+        // struct: { accessToken, refreshToken, email, name, phone, role, plan, avatar, ... }
+        final userJson = data;
+
+        final user = app_model.User.fromJson(userJson);
+
+        await _handleAuthSuccess(user, context);
       }
     } catch (e) {
       if (context.mounted) {
-        _showSnackBar(context, e.toString().replaceAll('Exception: ', ''), isError: true);
+        _showSnackBar(context, e.toString().replaceAll('Exception: ', ''),
+            isError: true);
       }
     } finally {
       _setLoading(false);
@@ -48,99 +55,108 @@ class AuthProvider with ChangeNotifier {
     required String password,
     required String name,
     required String phone,
+    String? referralCode,
     required BuildContext context,
   }) async {
     _setLoading(true);
     try {
-      firebase_auth.User? user = await _authService.signUpWithEmailAndData(
+      final response = await _apiService.register(
         email: email,
         password: password,
         name: name,
         phone: phone,
+        referralCode: referralCode,
       );
 
-      if (user != null && context.mounted) {
-        _showSnackBar(context, 'Pendaftaran Berhasil!', isError: false);
-        await _fetchUserDataAndNavigate(user.uid, context);
+      if (context.mounted) {
+        _showSnackBar(context,
+            response['message'] ?? 'Registrasi berhasil. Cek email untuk OTP.',
+            isError: false);
+
+        // Navigate to OTP Page
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OtpVerificationPage(email: email),
+          ),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        _showSnackBar(context, e.toString().replaceAll('Exception: ', ''), isError: true);
+        _showSnackBar(context, e.toString().replaceAll('Exception: ', ''),
+            isError: true);
       }
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- 3. UBAH PASSWORD ---
-  Future<bool> changePassword({
-    required String currentPassword,
-    required String newPassword,
-    required BuildContext context,
-  }) async {
+  // --- 3. VERIFY OTP ---
+  Future<void> verifyOtp(String email, String otp, BuildContext context) async {
     _setLoading(true);
     try {
-      final user = firebase_auth.FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("User tidak ditemukan");
-
-      final cred = firebase_auth.EmailAuthProvider.credential(
-        email: user.email!,
-        password: currentPassword,
-      );
-      await user.reauthenticateWithCredential(cred);
-      await user.updatePassword(newPassword);
+      final data = await _apiService.verifyOtp(email, otp);
 
       if (context.mounted) {
-        _showSnackBar(context, 'Password berhasil diubah!', isError: false);
-        Navigator.of(context).pop();
+        _showSnackBar(context, 'Verifikasi berhasil!', isError: false);
+
+        // Data 'user' dari backend
+        // Deteksi apakah user ada di dalam field 'user' atau root (flat)
+        Map<String, dynamic> userJson;
+        if (data.containsKey('user') && data['user'] is Map) {
+          userJson = data['user'];
+        } else {
+          // Fallback: asumsikan struktur flat (seperti pada login)
+          userJson = data;
+        }
+
+        final user = app_model.User.fromJson(userJson);
+
+        await _handleAuthSuccess(user, context);
       }
-      return true;
     } catch (e) {
+      print('❌ Error verifyOtp: $e');
       if (context.mounted) {
-        String message = 'Gagal mengubah password.';
-        if (e.toString().contains('wrong-password')) message = 'Password lama anda salah.';
-        else if (e.toString().contains('weak-password')) message = 'Password baru terlalu lemah.';
-        _showSnackBar(context, message, isError: true);
+        _showSnackBar(context, e.toString().replaceAll('Exception: ', ''),
+            isError: true);
+      }
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // --- 4. CHECK AUTH STATUS (Persistent Login) ---
+  Future<bool> checkAuthStatus(BuildContext context) async {
+    try {
+      final token = await _apiService.getAccessToken();
+      if (token != null && token.isNotEmpty) {
+        // Jika token ada, kita anggap user masih login.
+        // Idealnya: panggil endpoint /profile untuk refresh data user.
+        // Untuk sekarang, return true agar tidak ditendang ke onboarding.
+        return true;
       }
       return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // --- 4. UPLOAD FOTO PROFIL (METODE BASE64 - GRATIS) ---
-  Future<void> uploadProfilePicture(BuildContext context, XFile imageFile) async {
-    _setLoading(true);
-    try {
-      final user = firebase_auth.FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      // A. Ubah Gambar jadi Bytes -> Base64 String
-      final bytes = await imageFile.readAsBytes();
-      final String base64Image = base64Encode(bytes);
-
-      // B. Simpan String Base64 ke Firestore
-      // (Tanpa perlu Firebase Storage yang berbayar)
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'photoUrl': base64Image,
-      });
-
-      // C. Update Provider Lokal
-      if (context.mounted) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final updatedUser = userProvider.user!.copyWith(photoUrl: base64Image);
-        userProvider.setUser(updatedUser);
-        
-        _showSnackBar(context, 'Foto profil berhasil diperbarui!', isError: false);
-      }
     } catch (e) {
-      if (context.mounted) _showSnackBar(context, 'Gagal upload: $e', isError: true);
-    } finally {
-      _setLoading(false);
+      return false;
     }
   }
 
-  // --- 5. UPDATE DATA PROFIL (Teks) ---
+  // --- 5. LOGOUT ---
+  Future<void> signOut(BuildContext context) async {
+    await _apiService.logout();
+    if (context.mounted) {
+      Provider.of<UserProvider>(context, listen: false).clearUser();
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
+
+  // --- PLACEHOLDERS FOR MISSING FEATURES ---
+
+  Future<void> signInWithGoogle(BuildContext context) async {
+    // TODO: Implement Google Sign In via Backend
+    _showSnackBar(context, 'Login Google belum tersedia di backend ini.',
+        isError: true);
+  }
+
   Future<void> updateUserData({
     required String name,
     required String phone,
@@ -149,145 +165,113 @@ class AuthProvider with ChangeNotifier {
   }) async {
     _setLoading(true);
     try {
-      final uid = firebase_auth.FirebaseAuth.instance.currentUser!.uid;
+      // 1. Call API
+      final updatedData =
+          await _apiService.updateProfile(name: name, phone: phone);
 
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'name': name,
-        'phone': phone,
-        'dateOfBirth': dob,
-      });
-
+      // 2. Update Local State
       if (context.mounted) {
         final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final updatedUser = userProvider.user!.copyWith(
-          displayName: name,
-          phoneNumber: phone,
-          dateOfBirth: dob,
-        );
-        userProvider.setUser(updatedUser);
-        
-        _showSnackBar(context, 'Profil berhasil diperbarui!', isError: false);
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (context.mounted) _showSnackBar(context, 'Gagal update profil: $e', isError: true);
-    } finally {
-      _setLoading(false);
-    }
-  }
 
-  // --- 6. LOGIN GOOGLE ---
-  Future<void> signInWithGoogle(BuildContext context) async {
-    _setLoading(true);
-    try {
-      firebase_auth.UserCredential credential = await _authService.signInWithGoogle();
-      if (credential.user != null && context.mounted) {
-        await _fetchUserDataAndNavigate(credential.user!.uid, context);
+        // Copy existing user with new data
+        final newUser = userProvider.user?.copyWith(
+          displayName: updatedData['name'],
+          phoneNumber: updatedData['phone'],
+          // Note: dateOfBirth not sent/returned by backend API in this snippet,
+          // but we can assume it might be added later.
+          // For now we trust what we sent or keep existing if API doesn't return it.
+        );
+
+        if (newUser != null) {
+          userProvider.setUser(newUser);
+        }
+
+        _showSnackBar(context, 'Profil berhasil diperbarui!', isError: false);
+        Navigator.of(context).pop(); // Tutup halaman edit
       }
     } catch (e) {
       if (context.mounted) {
-        _showSnackBar(context, e.toString().replaceAll('Exception: ', ''), isError: true);
+        _showSnackBar(context, e.toString(), isError: true);
       }
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- 7. FITUR OTP (Kirim Kode) ---
-  Future<void> sendOtp(String phoneNumber, BuildContext context) async {
+  Future<void> uploadProfilePicture(
+      BuildContext context, XFile imageFile) async {
     _setLoading(true);
     try {
-      await firebase_auth.FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        verificationCompleted: (firebase_auth.PhoneAuthCredential credential) async {
-          await firebase_auth.FirebaseAuth.instance.signInWithCredential(credential);
-          _setLoading(false);
-        },
-        verificationFailed: (firebase_auth.FirebaseAuthException e) {
-          _setLoading(false);
-          _showSnackBar(context, 'Gagal kirim OTP: ${e.message}', isError: true);
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          _verificationId = verificationId;
-          _setLoading(false);
-          _showSnackBar(context, 'Kode OTP terkirim!', isError: false);
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          _verificationId = verificationId;
-        },
-      );
-    } catch (e) {
-      _setLoading(false);
-      if (context.mounted) _showSnackBar(context, e.toString(), isError: true);
-    }
-  }
+      // 1. Call API Upload
+      final avatarUrl = await _apiService.uploadAvatar(imageFile);
 
-  // --- 8. FITUR OTP (Verifikasi Kode) ---
-  Future<bool> verifyOtp(String smsCode, BuildContext context) async {
-    _setLoading(true);
-    try {
-      if (_verificationId == null) throw Exception("Verification ID null");
+      // 2. Update Local User State
+      if (context.mounted) {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        // Construct full URL if backend returns relative path
+        // Assuming backend returns "/uploads/..." and we need to prepend base URL for display?
+        // Actually, user model just stores string. The UI handles "http" or "base64".
+        // Ideally we store full path or handle relative path in UI (ProfileAvatar).
+        // Let's store what backend gives.
 
-      final credential = firebase_auth.PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: smsCode,
-      );
+        // Perbaiki: Backend biasa return relative path "/uploads/files...".
+        // Kita simpan itu. UI ProfileAvatar harus smart enough tambah Base URL
+        // ATAU kita tambah Base URL disini.
+        // Kita simpan FULL URL agar mudah.
+        // Namun AuthApiService base URL private.
+        // Mari simpan relative path, nanti AuthApiService atau UI yang resolve.
 
-      final userCredential = await firebase_auth.FirebaseAuth.instance.signInWithCredential(credential);
+        // TAPI, UI profile_avatar.dart kita tadi logicnya:
+        // if startsWith('http') -> NetworkImage.
+        // Jadi kita harus simpan Full URL.
 
-      if (userCredential.user != null && context.mounted) {
-         await _fetchUserDataAndNavigate(userCredential.user!.uid, context);
-         return true;
+        // Hack: Hardcode base url for now or expose it
+        final fullUrl = AuthApiService.baseUrlString + avatarUrl;
+
+        final newUser = userProvider.user?.copyWith(photoUrl: fullUrl);
+        if (newUser != null) userProvider.setUser(newUser);
+
+        _showSnackBar(context, 'Foto berhasil diupload!', isError: false);
       }
-      return false;
     } catch (e) {
-      if (context.mounted) _showSnackBar(context, 'Kode OTP Salah', isError: true);
-      return false;
+      if (context.mounted) {
+        _showSnackBar(context, e.toString(), isError: true);
+      }
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- PRIVATE HELPERS ---
-  Future<void> _fetchUserDataAndNavigate(String uid, BuildContext context) async {
-    try {
-      final userData = await _authService.getUserData(uid);
-      if (userData == null) throw Exception("Data profil tidak ditemukan.");
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required BuildContext context,
+  }) async {
+    // TODO: Implement Change Password
+    _showSnackBar(context, 'Ubah Password belum tersedia.', isError: true);
+    return false;
+  }
 
-      final currentUser = app_model.User(
-        uid: uid,
-        email: userData['email'] ?? '',
-        displayName: userData['name'] ?? 'No Name', 
-        phoneNumber: userData['phone'] ?? '',
-        hasPurchasedPackage: userData['hasPurchasedPackage'] ?? false,
-        photoUrl: userData['photoUrl'],
-        dateOfBirth: userData['dateOfBirth'], 
-        isAdmin: userData['role'] == 'admin' || userData['isAdmin'] == true,
-      );
+  // --- HELPERS ---
 
-      if (!context.mounted) return;
-      Provider.of<UserProvider>(context, listen: false).setUser(currentUser);
-      
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('has_purchased_package', currentUser.hasPurchasedPackage);
-      final savedPackage = prefs.getString('selected_package');
-      final savedDuration = prefs.getInt('selected_package_duration_months');
-      if (context.mounted && savedPackage != null && savedPackage.isNotEmpty) {
-        final packageProvider = Provider.of<PackageProvider>(context, listen: false);
-        packageProvider.loadCurrentUserPackage(savedPackage);
-        if (savedDuration != null) {
-          packageProvider.selectDuration(savedPackage, savedDuration);
-        }
-      }
+  Future<void> _handleAuthSuccess(
+      app_model.User user, BuildContext context) async {
+    // A. Simpan ke UserProvider
+    Provider.of<UserProvider>(context, listen: false).setUser(user);
 
-      if (!context.mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const DashboardGate()),
-        (route) => false,
-      );
-    } catch (e) {
-      throw Exception(e.toString());
+    // B. Cek Preferensi Paket (Jika ada logic paket lokal)
+    // (Bisa disesuaikan jika paket datang dari backend)
+    final packageProvider =
+        Provider.of<PackageProvider>(context, listen: false);
+    if (user.hasPurchasedPackage) {
+      // Logic sync paket jika perlu
     }
+
+    // C. Navigasi ke Dashboard
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardGate()),
+      (route) => false,
+    );
   }
 
   void _setLoading(bool value) {
@@ -295,7 +279,8 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void _showSnackBar(BuildContext context, String message, {bool isError = false}) {
+  void _showSnackBar(BuildContext context, String message,
+      {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

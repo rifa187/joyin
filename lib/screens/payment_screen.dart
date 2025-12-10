@@ -384,9 +384,8 @@ class PaymentScreenState extends State<PaymentScreen> {
               children: [
                 Icon(
                   method['icon'],
-                  color: isSelected
-                      ? const Color(0xFF5FCAAC)
-                      : Colors.grey[500],
+                  color:
+                      isSelected ? const Color(0xFF5FCAAC) : Colors.grey[500],
                   size: 28,
                 ),
                 const SizedBox(height: 6),
@@ -395,12 +394,10 @@ class PaymentScreenState extends State<PaymentScreen> {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
                     fontSize: 10,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                    color: isSelected
-                        ? const Color(0xFF5FCAAC)
-                        : Colors.grey[600],
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color:
+                        isSelected ? const Color(0xFF5FCAAC) : Colors.grey[600],
                   ),
                 ),
               ],
@@ -661,7 +658,7 @@ class PaymentScreenState extends State<PaymentScreen> {
           if (currentUser != null) {
             final updatedUser = currentUser.copyWith(
               hasPurchasedPackage: true,
-              packageDurationMonths: _duration,
+              // packageDurationMonths removed from model
             );
             userProvider.setUser(updatedUser);
           }
