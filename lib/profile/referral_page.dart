@@ -53,7 +53,8 @@ class _ReferralPageState extends State<ReferralPage> {
       appBar: AppBar(
         title: Text(
           'Program Referral',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.white),
+          style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w700, color: Colors.white),
         ),
         centerTitle: false,
         elevation: 0,
@@ -146,7 +147,8 @@ class _ReferralPageState extends State<ReferralPage> {
               color: AppColors.joyin.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.card_giftcard, color: AppColors.joyin, size: 28),
+            child: const Icon(Icons.card_giftcard,
+                color: AppColors.joyin, size: 28),
           ),
         ],
       ),
@@ -187,15 +189,18 @@ class _ReferralPageState extends State<ReferralPage> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.star_rounded, color: Colors.white.withValues(alpha: 0.9), size: 18),
+                    Icon(Icons.star_rounded,
+                        color: Colors.white.withValues(alpha: 0.9), size: 18),
                     const SizedBox(width: 6),
                     Text(
                       'Bonus aktif',
@@ -307,7 +312,8 @@ class _ReferralPageState extends State<ReferralPage> {
               hintStyle: GoogleFonts.poppins(color: AppColors.textSecondary),
               filled: true,
               fillColor: const Color(0xFFF6F7FB),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -323,7 +329,8 @@ class _ReferralPageState extends State<ReferralPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.joyin,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
               child: _isSubmitting
                   ? const SizedBox(
@@ -335,7 +342,9 @@ class _ReferralPageState extends State<ReferralPage> {
                       ),
                     )
                   : Text(
-                      _claimedCode == null ? 'Aktifkan Referral' : 'Kode Aktif: $_claimedCode',
+                      _claimedCode == null
+                          ? 'Aktifkan Referral'
+                          : 'Kode Aktif: $_claimedCode',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -479,15 +488,18 @@ class _ReferralPageState extends State<ReferralPage> {
   }
 
   String _buildReferralCode(User? user) {
-    final seed = user?.uid.isNotEmpty == true ? user!.uid : DateTime.now().millisecondsSinceEpoch.toString();
-    final code = _generateCodeFromSeed(seed, length: 6);
-    return 'JYN-$code';
-  }
-
-  String _generateCodeFromSeed(String seed, {int length = 6}) {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final rand = Random(seed.hashCode);
-    return List.generate(length, (_) => chars[rand.nextInt(chars.length)]).join();
+    final normalizedName = (user?.displayName ?? '').trim().toUpperCase();
+    if (normalizedName.isNotEmpty) {
+      final words = normalizedName.split(' ');
+      final initials =
+          words.map((w) => w.isNotEmpty ? w[0] : '').take(2).join();
+      return 'JYN-$initials${DateTime.now().year % 100}';
+    }
+    final uid = user?.id ?? '';
+    if (uid.length >= 5) {
+      return 'JYN-${uid.substring(0, 5).toUpperCase()}';
+    }
+    return 'JYN-INVITE';
   }
 
   Future<void> _copyCode(String referralCode) async {
@@ -495,7 +507,8 @@ class _ReferralPageState extends State<ReferralPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Kode $referralCode disalin. Bagikan ke teman sekarang!', style: GoogleFonts.poppins()),
+        content: Text('Kode $referralCode disalin. Bagikan ke teman sekarang!',
+            style: GoogleFonts.poppins()),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.joyin,
       ),
@@ -507,7 +520,8 @@ class _ReferralPageState extends State<ReferralPage> {
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Masukkan kode referral terlebih dahulu.', style: GoogleFonts.poppins()),
+          content: Text('Masukkan kode referral terlebih dahulu.',
+              style: GoogleFonts.poppins()),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -526,7 +540,8 @@ class _ReferralPageState extends State<ReferralPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Kode $code aktif. Bonus onboarding sudah ditambahkan!', style: GoogleFonts.poppins()),
+        content: Text('Kode $code aktif. Bonus onboarding sudah ditambahkan!',
+            style: GoogleFonts.poppins()),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.joyin,
       ),
