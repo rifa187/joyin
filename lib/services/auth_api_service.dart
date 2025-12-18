@@ -1,236 +1,188 @@
-import 'dart:io';
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+import 'dart:developer' as dev;
+import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 class AuthApiService {
-  final Dio _dio = Dio();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  static const String _loginPath = '/login';
+  static const String _registerPath = '/register';
+  static const String _verifyOtpPath = '/otp/verify';
+  static const String _forgotPasswordPath = '/password/forgot';
+  static const String _resetPasswordPath = '/password/reset';
+  static const String _changePasswordPath = '/password/change';
 
-  // URL Backend
-  // Gunakan 10.0.2.2 untuk Android Emulator, localhost untuk iOS/Web/Windows
-  // Jika test di Real Device, gunakan IP Address laptop (misal 192.168.1.x)
-  static final String baseUrlString =
-      (kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux)
-          ? 'http://localhost:3000'
-          : 'http://10.0.2.2:3000';
+  Uri _authUrl(String path) => Uri.parse('${ApiConfig.authBaseUrl}$path');
+  Uri _url(String path) => Uri.parse('${ApiConfig.baseUrl}$path');
 
-  static final String _baseUrl = baseUrlString;
-
-  AuthApiService() {
-    _dio.options.baseUrl = _baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
-
-    // Interceptor untuk Log & Header Token
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        debugPrint('🌐 [API Request] ${options.method} ${options.path}');
-        // Ambil token dari storage
-        final token = await _storage.read(key: 'accessToken');
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        return handler.next(options);
-      },
-      onResponse: (response, handler) {
-        debugPrint('✅ [API Response] ${response.statusCode} ${response.data}');
-        return handler.next(response);
-      },
-      onError: (DioException e, handler) {
-        debugPrint('❌ [API Error] ${e.response?.statusCode} ${e.message}');
-        debugPrint('   Data: ${e.response?.data}');
-        return handler.next(e);
-      },
-    ));
-  }
-
-  // --- LOGIN ---
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    try {
-      final response = await _dio.post('/api/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
-
-      if (response.statusCode == 200 && response.data['status'] == true) {
-        final data = response.data['data'];
-
-        // Simpan token
-        await _storage.write(key: 'accessToken', value: data['accessToken']);
-        await _storage.write(key: 'refreshToken', value: data['refreshToken']);
-
-        return data; // Return full user data + tokens
-      } else {
-        throw Exception(response.data['message'] ?? 'Login gagal');
-      }
-    } on DioException catch (e) {
-      throw Exception(_handleError(e));
-    }
-  }
-
-  // --- REGISTER ---
-  Future<Map<String, dynamic>> register({
-    required String name,
+  Future<Map<String, dynamic>> login({
     required String email,
     required String password,
+  }) async {
+    final res = await http.post(
+      _authUrl(_loginPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Login gagal: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) return decoded;
+
+    // kalau backend balikin array/string, bungkus aja
+    return {'data': decoded};
+  }
+
+  Future<Map<String, dynamic>> register({
+    required String email,
+    required String password,
+    required String name,
     required String phone,
     String? referralCode,
   }) async {
-    try {
-      final response = await _dio.post('/api/auth/register', data: {
-        'name': name,
+    final res = await http.post(
+      _authUrl(_registerPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
         'email': email,
         'password': password,
-        'phone': phone,
-        'referralCode': referralCode,
-      });
-
-      if (response.statusCode == 201 && response.data['status'] == true) {
-        return response.data; // Usually just a message
-      } else {
-        throw Exception(response.data['message'] ?? 'Register gagal');
-      }
-    } on DioException catch (e) {
-      throw Exception(_handleError(e));
-    }
-  }
-
-  // --- VERIFY OTP ---
-  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
-    try {
-      final response = await _dio.post('/api/otp/verify', data: {
-        'email': email,
-        'otp': otp,
-      });
-
-      if (response.statusCode == 200 && response.data['status'] == true) {
-        final data = response.data[
-            'data']; // Expecting { user, accessToken, refreshToken } from backend
-
-        // Simpan token jika backend mengirimnya di sini
-        if (data['accessToken'] != null) {
-          await _storage.write(key: 'accessToken', value: data['accessToken']);
-          await _storage.write(
-              key: 'refreshToken', value: data['refreshToken']);
-        }
-
-        return data;
-      } else {
-        throw Exception(response.data['message'] ?? 'Verifikasi OTP gagal');
-      }
-    } on DioException catch (e) {
-      throw Exception(_handleError(e));
-    }
-  }
-
-  // --- LOGOUT ---
-  Future<void> logout() async {
-    try {
-      // Optional: Call backend logout
-      // await _dio.post('/auth/logout');
-    } catch (e) {
-      // Ignore network error on logout
-    } finally {
-      await _storage.deleteAll();
-    }
-  }
-
-  // --- GET PROFILE ---
-  Future<Map<String, dynamic>> getProfile() async {
-    try {
-      final response = await _dio.get('/api/profile');
-      if (response.statusCode == 200 && response.data['status'] == true) {
-        return response.data['data'];
-      }
-      throw Exception(response.data['message']);
-    } on DioException catch (e) {
-      throw Exception(_handleError(e));
-    }
-  }
-
-  // --- UPDATE PROFILE (TEXT) ---
-  Future<Map<String, dynamic>> updateProfile({
-    required String name,
-    required String phone,
-    // Add other fields if needed by backend (e.g. languagePreference)
-  }) async {
-    try {
-      final response = await _dio.put('/api/profile', data: {
         'name': name,
         'phone': phone,
-      });
+        if (referralCode != null && referralCode.isNotEmpty)
+          'referralCode': referralCode,
+      }),
+    );
 
-      if (response.statusCode == 200 && response.data['status'] == true) {
-        return response.data['data'];
-      }
-      throw Exception(response.data['message'] ?? 'Update gagal');
-    } on DioException catch (e) {
-      throw Exception(_handleError(e));
+    dev.log(
+      'register ${_authUrl(_registerPath)} -> ${res.statusCode} ${res.body}',
+      name: 'AuthApiService',
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Register gagal: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) return decoded;
+    return {'data': decoded};
+  }
+
+  Future<Map<String, dynamic>> verifyOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final res = await http.post(
+      _url(_verifyOtpPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'otp': otp,
+      }),
+    );
+
+    dev.log(
+      'verifyOtp ${_url(_verifyOtpPath)} -> ${res.statusCode} ${res.body}',
+      name: 'AuthApiService',
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Verifikasi OTP gagal: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) return decoded;
+    return {'data': decoded};
+  }
+
+  Future<void> forgotPassword({required String email}) async {
+    final res = await http.post(
+      _url(_forgotPasswordPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'email': email}),
+    );
+
+    dev.log(
+      'forgotPassword ${_url(_forgotPasswordPath)} -> ${res.statusCode} ${res.body}',
+      name: 'AuthApiService',
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Forgot password gagal: ${res.statusCode} ${res.body}');
     }
   }
 
-  // --- UPLOAD AVATAR ---
-  // Gunakan XFile dari image_picker agar kompatibel dengan Web & Mobile
-  Future<String> uploadAvatar(dynamic file) async {
-    try {
-      FormData? formData;
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final res = await http.post(
+      _url(_resetPasswordPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({
+        'token': token,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
+      }),
+    );
 
-      // Handle XFile (Cross Platform)
-      if (file.runtimeType.toString().contains('XFile')) {
-        // Note: We avoid importing image_picker here to keep service clean,
-        // but strictly we expect XFile.
-        // Better approach: Read bytes in Provider and pass bytes, or pass XFile.
-        // Let's assume input is XFile from image_picker.
-        final xFile = file;
-        final bytes = await xFile.readAsBytes();
-        final fileName = xFile.name;
+    dev.log(
+      'resetPassword ${_url(_resetPasswordPath)} -> ${res.statusCode} ${res.body}',
+      name: 'AuthApiService',
+    );
 
-        formData = FormData.fromMap({
-          'avatar': MultipartFile.fromBytes(
-            bytes,
-            filename: fileName,
-          ),
-        });
-      } else if (file is File) {
-        // Fallback for dart:io File
-        String fileName = file.path.split('/').last;
-        formData = FormData.fromMap({
-          'avatar': await MultipartFile.fromFile(
-            file.path,
-            filename: fileName,
-          ),
-        });
-      } else {
-        throw Exception("Tipe file tidak didukung");
-      }
-
-      final response = await _dio.put('/api/profile/avatar', data: formData);
-
-      if (response.statusCode == 200 && response.data['status'] == true) {
-        // Backend returns { status: true, data: { avatar: "/uploads/..." } }
-        return response.data['data']['avatar'];
-      }
-      throw Exception(response.data['message'] ?? 'Upload gagal');
-    } on DioException catch (e) {
-      throw Exception(_handleError(e));
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Reset password gagal: ${res.statusCode} ${res.body}');
     }
   }
 
-  // --- GET STORED TOKEN ---
-  Future<String?> getAccessToken() async {
-    return await _storage.read(key: 'accessToken');
-  }
+  Future<void> changePassword({
+    required String accessToken,
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final res = await http.put(
+      _url(_changePasswordPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+      body: jsonEncode({
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
+      }),
+    );
 
-  // --- HELPER ERROR ---
-  String _handleError(DioException e) {
-    if (e.response != null) {
-      final body = e.response?.data;
-      if (body is Map && body.containsKey('message')) {
-        return body['message'];
-      }
-      return 'Terjadi kesalahan: ${e.response?.statusCode}';
+    dev.log(
+      'changePassword ${_url(_changePasswordPath)} -> ${res.statusCode} ${res.body}',
+      name: 'AuthApiService',
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Change password gagal: ${res.statusCode} ${res.body}');
     }
-    return 'Gagal terhubung ke server. Cek koneksi internet anda.';
   }
 }

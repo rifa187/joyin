@@ -7,9 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../core/app_colors.dart';
-import '../providers/user_provider.dart';
+import '../providers/auth_provider.dart';
 // Import file grafik yang baru kita buat
-import 'widgets/dashboard_charts.dart'; 
+import 'widgets/dashboard_charts.dart';
 import '../screens/pilih_paket_screen.dart';
 import '../package/package_theme.dart';
 
@@ -20,13 +20,22 @@ class HomeContent extends StatefulWidget {
   State<HomeContent> createState() => _HomeContentState();
 }
 
-class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin {
+class _HomeContentState extends State<HomeContent>
+    with TickerProviderStateMixin {
   // Data
   final List<_MonthlyStat> _monthlyStats = const [
-    _MonthlyStat('Jan', 1.0), _MonthlyStat('Feb', 3.0), _MonthlyStat('Mar', 4.0),
-    _MonthlyStat('Apr', 3.0), _MonthlyStat('May', 2.0), _MonthlyStat('Jun', 5.0),
-    _MonthlyStat('Jul', 4.0), _MonthlyStat('Aug', 2.0), _MonthlyStat('Sep', 1.0),
-    _MonthlyStat('Oct', 3.0), _MonthlyStat('Nov', 2.0), _MonthlyStat('Dec', 5.0),
+    _MonthlyStat('Jan', 1.0),
+    _MonthlyStat('Feb', 3.0),
+    _MonthlyStat('Mar', 4.0),
+    _MonthlyStat('Apr', 3.0),
+    _MonthlyStat('May', 2.0),
+    _MonthlyStat('Jun', 5.0),
+    _MonthlyStat('Jul', 4.0),
+    _MonthlyStat('Aug', 2.0),
+    _MonthlyStat('Sep', 1.0),
+    _MonthlyStat('Oct', 3.0),
+    _MonthlyStat('Nov', 2.0),
+    _MonthlyStat('Dec', 5.0),
   ];
 
   // Perhatikan tipe data PieChartData diambil dari dashboard_charts.dart
@@ -93,7 +102,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
     final String? packageName = packageProvider.currentUserPackage;
     final PackageTheme packageTheme = PackageThemeResolver.resolve(packageName);
     final bool hasPackage = packageName != null && packageName.isNotEmpty;
-    final bool animateBackground = packageTheme.backgroundGradient.toSet().length > 1;
+    final bool animateBackground =
+        packageTheme.backgroundGradient.toSet().length > 1;
     final bool animateHeader = packageTheme.headerGradient.toSet().length > 1;
     final bool shouldAnimateGradient = animateBackground || animateHeader;
 
@@ -103,12 +113,13 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
       _bgGradientController.stop();
     }
 
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, _) {
-        final user = userProvider.user;
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        final user = authProvider.user;
         final displayName = (user?.displayName?.contains('@') ?? false
                 ? user?.displayName?.split('@').first
-                : user?.displayName) ?? 'User';
+                : user?.displayName) ??
+            'User';
         final topPadding = MediaQuery.of(context).padding.top;
 
         return AnimatedBuilder(
@@ -193,7 +204,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
           begin: Alignment(-1 + (animateHeader ? gradientShift : 0), -1),
           end: Alignment(1 + (animateHeader ? gradientShift : 0), 1),
         ),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+        borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -220,8 +232,13 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
                   }),
                   child: Transform.translate(
                     offset: Offset(_mascotOffsetX, _mascotOffsetY),
-                    child: Image.asset('assets/images/maskot_kiri.png', height: _mascotHeight, fit: BoxFit.contain,
-                        errorBuilder: (c, o, s) => const Icon(Icons.image_not_supported, color: Colors.white, size: 50)),
+                    child: Image.asset('assets/images/maskot_kiri.png',
+                        height: _mascotHeight,
+                        fit: BoxFit.contain,
+                        errorBuilder: (c, o, s) => const Icon(
+                            Icons.image_not_supported,
+                            color: Colors.white,
+                            size: 50)),
                   ),
                 ),
               ),
@@ -258,7 +275,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SplitTextLine(segments: lines[0], controller: _textController, maxSpread: 0.25),
+        _SplitTextLine(
+            segments: lines[0], controller: _textController, maxSpread: 0.25),
         const SizedBox(height: 4),
         if (hasPackage)
           Padding(
@@ -266,7 +284,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
             child: _TypingText(
               text: displayName,
               style: highlightStyle,
-              duration: Duration(milliseconds: (displayName.length * 90).clamp(600, 1400)),
+              duration: Duration(
+                  milliseconds: (displayName.length * 90).clamp(600, 1400)),
               delay: const Duration(milliseconds: 80),
             ),
           ),
@@ -294,14 +313,26 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(40),
-        boxShadow: [BoxShadow(color: theme.accent.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 15))],
+        boxShadow: [
+          BoxShadow(
+              color: theme.accent.withOpacity(0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 15))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Fitur Terkunci', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          Text('Fitur Terkunci',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                  fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 18),
-          Text('Beli paket untuk membuka semua fitur dan mulai kelola chat bisnismu dengan lebih mudah.', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
+          Text(
+              'Beli paket untuk membuka semua fitur dan mulai kelola chat bisnismu dengan lebih mudah.',
+              textAlign: TextAlign.center,
+              style:
+                  GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600])),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
@@ -312,9 +343,12 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.accent,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
             ),
-            child: Text('Lihat Pilihan Paket', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+            child: Text('Lihat Pilihan Paket',
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
           ),
         ],
       ),
@@ -328,16 +362,26 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(40),
-        boxShadow: [BoxShadow(color: theme.accent.withOpacity(0.12), blurRadius: 30, offset: const Offset(0, 15))],
+        boxShadow: [
+          BoxShadow(
+              color: theme.accent.withOpacity(0.12),
+              blurRadius: 30,
+              offset: const Offset(0, 15))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Chat Masuk', textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+          Text('Chat Masuk',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                  fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 18),
           _buildChatStatRow(),
           const SizedBox(height: 24),
-          Text('Statistik Pengiriman Pesan', style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+          Text('Statistik Pengiriman Pesan',
+              style: GoogleFonts.poppins(
+                  fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           _buildMessageLegend(),
           const SizedBox(height: 16),
@@ -353,37 +397,86 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
 
   // ... (Fungsi Stat Row & Legend SAMA SEPERTI SEBELUMNYA) ...
   Widget _buildChatStatRow() {
-    final accent = PackageThemeResolver.resolve(context.read<PackageProvider>().currentUserPackage).accent;
+    final accent = PackageThemeResolver.resolve(
+            context.read<PackageProvider>().currentUserPackage)
+        .accent;
     final stats = [
-      _ChatStatCardData(value: '0', label: 'Chat Bulanan', accent: accent, background: accent.withOpacity(0.1)),
-      _ChatStatCardData(value: '0', label: 'Chat Harian', accent: accent.withOpacity(0.8), background: accent.withOpacity(0.08)),
-      _ChatStatCardData(value: '0', label: 'Chat Mingguan', accent: accent.withOpacity(0.6), background: accent.withOpacity(0.06)),
+      _ChatStatCardData(
+          value: '0',
+          label: 'Chat Bulanan',
+          accent: accent,
+          background: accent.withOpacity(0.1)),
+      _ChatStatCardData(
+          value: '0',
+          label: 'Chat Harian',
+          accent: accent.withOpacity(0.8),
+          background: accent.withOpacity(0.08)),
+      _ChatStatCardData(
+          value: '0',
+          label: 'Chat Mingguan',
+          accent: accent.withOpacity(0.6),
+          background: accent.withOpacity(0.06)),
     ];
-    return Row(children: stats.map((s) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: _buildChatStatCard(s)))).toList());
+    return Row(
+        children: stats
+            .map((s) => Expanded(
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _buildChatStatCard(s))))
+            .toList());
   }
 
   Widget _buildChatStatCard(_ChatStatCardData data) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 18),
-      decoration: BoxDecoration(color: data.background, borderRadius: BorderRadius.circular(16), border: Border.all(color: data.accent.withOpacity(0.4))),
-      child: Column(children: [Text(data.value, style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700, color: data.accent)), const SizedBox(height: 4), Text(data.label, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: data.accent))]),
+      decoration: BoxDecoration(
+          color: data.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: data.accent.withOpacity(0.4))),
+      child: Column(children: [
+        Text(data.value,
+            style: GoogleFonts.poppins(
+                fontSize: 26, fontWeight: FontWeight.w700, color: data.accent)),
+        const SizedBox(height: 4),
+        Text(data.label,
+            style: GoogleFonts.poppins(
+                fontSize: 10, fontWeight: FontWeight.w500, color: data.accent))
+      ]),
     );
   }
 
   Widget _buildMessageLegend() {
-    return Wrap(spacing: 16, runSpacing: 8, children: _pieChartData.map((d) => _buildLegendChip(d.label, d.color)).toList());
+    return Wrap(
+        spacing: 16,
+        runSpacing: 8,
+        children: _pieChartData
+            .map((d) => _buildLegendChip(d.label, d.color))
+            .toList());
   }
 
   Widget _buildLegendChip(String label, Color color) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))), const SizedBox(width: 6), Text(label, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF4A4A4A)))]);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+              color: color, borderRadius: BorderRadius.circular(4))),
+      const SizedBox(width: 6),
+      Text(label,
+          style:
+              GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF4A4A4A)))
+    ]);
   }
 
   // === KEMBALIKAN LOGIC GRAFIK DISINI ===
   Widget _buildMessageVolumeChart() {
     final stats = _monthlyStats;
-    final double maxValue = stats.map((stat) => stat.value).reduce((a, b) => a > b ? a : b);
-    final double chartTopValue = maxValue == 0 ? 2.0 : (maxValue / 2).ceil() * 2.0;
-    final double average = stats.fold<double>(0, (sum, stat) => sum + stat.value) / stats.length;
+    final double maxValue =
+        stats.map((stat) => stat.value).reduce((a, b) => a > b ? a : b);
+    final double chartTopValue =
+        maxValue == 0 ? 2.0 : (maxValue / 2).ceil() * 2.0;
+    final double average =
+        stats.fold<double>(0, (sum, stat) => sum + stat.value) / stats.length;
 
     return Column(
       children: [
@@ -393,13 +486,15 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12)
-            ),
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12)),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _selectedChartYear,
-                items: _chartYears.map((y) => DropdownMenuItem(value: y, child: Text(y.toString()))).toList(),
+                items: _chartYears
+                    .map((y) =>
+                        DropdownMenuItem(value: y, child: Text(y.toString())))
+                    .toList(),
                 onChanged: (v) => setState(() => _selectedChartYear = v!),
               ),
             ),
@@ -414,13 +509,14 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
               const double labelSpace = 36;
               return CustomPaint(
                 size: Size(constraints.maxWidth, constraints.maxHeight),
-                painter: ChartGridPainter( // Panggil Painter
+                painter: ChartGridPainter(
+                  // Panggil Painter
                   maxValue: chartTopValue,
                   averageValue: average,
                   labelSpace: labelSpace,
                   leftPadding: 30,
                 ),
-                // (Logic anak-anak bar chart bisa ditambahkan di sini, 
+                // (Logic anak-anak bar chart bisa ditambahkan di sini,
                 //  tapi Painter di atas sudah menggambar grid dasarnya)
               );
             },
@@ -431,7 +527,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
   }
 
   Widget _buildMessageStatusChart() {
-    final double totalValue = _pieChartData.fold(0, (sum, item) => sum + item.value);
+    final double totalValue =
+        _pieChartData.fold(0, (sum, item) => sum + item.value);
     return SizedBox(
       height: 160,
       child: VisibilityDetector(
@@ -448,7 +545,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
         child: AnimatedBuilder(
           animation: _pieController,
           builder: (context, child) {
-            final double t = Curves.easeOutCubic.transform(_pieController.value);
+            final double t =
+                Curves.easeOutCubic.transform(_pieController.value);
             return Opacity(
               opacity: t,
               child: Transform.scale(
@@ -466,7 +564,8 @@ class _HomeContentState extends State<HomeContent> with TickerProviderStateMixin
           child: Center(
             child: Text(
               '${totalValue.toInt()}%',
-              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700),
+              style: GoogleFonts.poppins(
+                  fontSize: 24, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -551,7 +650,8 @@ class _AuroraBlob extends StatelessWidget {
     final double wave = math.sin((value + phase) * math.pi * 2);
     final Offset offset = Offset(travel.dx * wave, travel.dy * wave);
     return Align(
-      alignment: Alignment(baseAlignment.x + offset.dx, baseAlignment.y + offset.dy),
+      alignment:
+          Alignment(baseAlignment.x + offset.dx, baseAlignment.y + offset.dy),
       child: Container(
         width: size,
         height: size,
@@ -575,16 +675,38 @@ class _AuroraBlob extends StatelessWidget {
 }
 
 // --- HELPER CLASSES ---
-class _ChatStatCardData { final String value, label; final Color accent, background; const _ChatStatCardData({required this.value, required this.label, required this.accent, required this.background}); }
-class _MonthlyStat { final String label; final double value; const _MonthlyStat(this.label, this.value); }
+class _ChatStatCardData {
+  final String value, label;
+  final Color accent, background;
+  const _ChatStatCardData(
+      {required this.value,
+      required this.label,
+      required this.accent,
+      required this.background});
+}
 
-class _MascotFadeSlide extends StatefulWidget { final Widget child; const _MascotFadeSlide({required this.child}); @override State<_MascotFadeSlide> createState() => _MascotFadeSlideState(); }
-class _MascotFadeSlideState extends State<_MascotFadeSlide> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 950));
-  late final Animation<double> _fade = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
-  late final Animation<Offset> _slide = Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero)
-      .animate(CurvedAnimation(parent: _c, curve: Curves.easeOutBack));
+class _MonthlyStat {
+  final String label;
+  final double value;
+  const _MonthlyStat(this.label, this.value);
+}
+
+class _MascotFadeSlide extends StatefulWidget {
+  final Widget child;
+  const _MascotFadeSlide({required this.child});
+  @override
+  State<_MascotFadeSlide> createState() => _MascotFadeSlideState();
+}
+
+class _MascotFadeSlideState extends State<_MascotFadeSlide>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 950));
+  late final Animation<double> _fade =
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+  late final Animation<Offset> _slide =
+      Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero)
+          .animate(CurvedAnimation(parent: _c, curve: Curves.easeOutBack));
 
   @override
   void initState() {
@@ -601,8 +723,9 @@ class _MascotFadeSlideState extends State<_MascotFadeSlide> with SingleTickerPro
   }
 
   @override
-  Widget build(BuildContext context) =>
-      FadeTransition(opacity: _fade, child: SlideTransition(position: _slide, child: widget.child));
+  Widget build(BuildContext context) => FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child));
 }
 
 class _TextSegment {
@@ -665,7 +788,8 @@ class _SplitTextLine extends StatelessWidget {
         final double segmentOffset = segmentDelay * (tokenSegmentIndex[index]);
         final double rawStart = (index * step) + delayOffset + segmentOffset;
         final double clampedStart = rawStart.clamp(0, 0.99);
-        final double clampedEnd = (clampedStart + 0.35).clamp(clampedStart + 0.01, 1);
+        final double clampedEnd =
+            (clampedStart + 0.35).clamp(clampedStart + 0.01, 1);
         final anim = CurvedAnimation(
           parent: controller,
           curve: Interval(
@@ -768,7 +892,8 @@ class _TypingText extends StatefulWidget {
   State<_TypingText> createState() => _TypingTextState();
 }
 
-class _TypingTextState extends State<_TypingText> with SingleTickerProviderStateMixin {
+class _TypingTextState extends State<_TypingText>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
 
   @override
@@ -791,7 +916,9 @@ class _TypingTextState extends State<_TypingText> with SingleTickerProviderState
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final int count = (_controller.value * widget.text.length).floor().clamp(0, widget.text.length);
+        final int count = (_controller.value * widget.text.length)
+            .floor()
+            .clamp(0, widget.text.length);
         final visible = widget.text.substring(0, count);
         return Text(visible, style: widget.style);
       },

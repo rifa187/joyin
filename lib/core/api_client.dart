@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:joyin/config/api_config.dart';
+import 'package:joyin/services/token_storage.dart';
 
 /*
 ApiClient adalah "jantung" dari koneksi aplikasi Anda ke backend.
@@ -10,7 +12,7 @@ Dio yang mengelola semua koneksi.
 Fitur utamanya adalah "Interceptor" yang bekerja seperti middleware:
 1. SECARA OTOMATIS menambahkan 'Authorization' (Access Token) ke setiap request.
 2. SECARA OTOMATIS mendeteksi error 401 (Unauthorized) saat Access Token kedaluwarsa.
-3. SECARA OTOMATIS memanggil endpoint '/auth/refresh' menggunakan Refresh Token.
+3. SECARA OTOMATIS memanggil endpoint refresh menggunakan Refresh Token.
 4. SECARA OTOMATIS menyimpan token baru dan mengulangi request yang gagal.
 5. Jika Refresh Token juga gagal, ia akan menghapus token dan (nantinya) bisa 
    mengarahkan pengguna ke halaman Login.
@@ -33,7 +35,7 @@ class ApiClient {
     _dio.interceptors.add(
       QueuedInterceptorsWrapper(
         onRequest: (options, handler) async {
-          final accessToken = await _storage.read(key: 'accessToken');
+          final accessToken = await _storage.read(key: _accessTokenKey);
           if (accessToken != null) {
             options.headers['Authorization'] = 'Bearer $accessToken';
           }
@@ -43,7 +45,7 @@ class ApiClient {
           if (e.response?.statusCode == 401) {
             debugPrint('Token kedaluwarsa. Mencoba refresh...');
 
-            final refreshToken = await _storage.read(key: 'refreshToken');
+            final refreshToken = await _storage.read(key: _refreshTokenKey);
             if (refreshToken == null) {
               debugPrint('Refresh token tidak ada. Logout.');
               await _clearTokens();
@@ -51,10 +53,15 @@ class ApiClient {
             }
 
             try {
-              final refreshDio = Dio(BaseOptions(baseUrl: _baseUrl));
+              final refreshDio =
+                  Dio(BaseOptions(baseUrl: ApiConfig.authBaseUrl));
               final refreshResponse = await refreshDio.post(
-                '/auth/refresh',
+                '/refresh',
                 data: {'refreshToken': refreshToken},
+                options: Options(headers: {
+                  // Kirim juga sebagai cookie jika backend hanya membaca cookie
+                  'Cookie': 'refreshToken=$refreshToken',
+                }),
               );
 
               if (refreshResponse.statusCode == 200) {
@@ -103,7 +110,9 @@ class ApiClient {
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
 
-  static const String _baseUrl = 'http://10.0.2.2:3000/api/v1';
+  static final String _baseUrl = ApiConfig.baseUrl;
+  static const String _accessTokenKey = TokenStorage.accessTokenKey;
+  static const String _refreshTokenKey = TokenStorage.refreshTokenKey;
 
   Dio get client => _dio;
 
@@ -184,15 +193,15 @@ class ApiClient {
     String? refreshToken,
   }) async {
     if (accessToken != null) {
-      await _storage.write(key: 'accessToken', value: accessToken);
+      await _storage.write(key: _accessTokenKey, value: accessToken);
     }
     if (refreshToken != null) {
-      await _storage.write(key: 'refreshToken', value: refreshToken);
+      await _storage.write(key: _refreshTokenKey, value: refreshToken);
     }
   }
 
   Future<void> _clearTokens() async {
-    await _storage.delete(key: 'accessToken');
-    await _storage.delete(key: 'refreshToken');
+    await _storage.delete(key: _accessTokenKey);
+    await _storage.delete(key: _refreshTokenKey);
   }
 }

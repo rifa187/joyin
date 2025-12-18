@@ -3,8 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/user_model.dart';
 import '../auth/login_page.dart';
 import 'package:joyin/gen_l10n/app_localizations.dart';
-import 'package:provider/provider.dart'; // Import provider
-import 'package:joyin/providers/dashboard_provider.dart'; // Import DashboardProvider
+import 'package:provider/provider.dart';
+import 'package:joyin/providers/dashboard_provider.dart';
+import 'package:joyin/providers/auth_provider.dart';
 
 class AppDrawer extends StatelessWidget {
   final User? user;
@@ -22,7 +23,8 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dashboardProvider = Provider.of<DashboardProvider>(context); // Get DashboardProvider here
+    final dashboardProvider =
+        Provider.of<DashboardProvider>(context); // Get DashboardProvider here
 
     return Drawer(
       child: Container(
@@ -127,14 +129,19 @@ class AppDrawer extends StatelessWidget {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          onPressed: () {
+                          onPressed: () async {
                             Navigator.of(context).pop(); // Close the dialog
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                builder: (context) => const LoginPage(),
-                              ),
-                              (route) => false,
-                            );
+                            await Provider.of<AuthProvider>(context,
+                                    listen: false)
+                                .logout();
+                            if (context.mounted) {
+                              Navigator.of(context).pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (context) => const LoginPage(),
+                                ),
+                                (route) => false,
+                              );
+                            }
                           },
                         ),
                       ],

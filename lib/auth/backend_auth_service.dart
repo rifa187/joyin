@@ -3,6 +3,7 @@ import 'package:joyin/core/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:joyin/core/env.dart';
 
 class BackendAuthService {
   final Dio _dio = Dio();
@@ -14,6 +15,8 @@ class BackendAuthService {
   }
 
   static String _getBackendUrl() {
+    if (Env.apiBaseUrl.isNotEmpty) return Env.apiBaseUrl;
+
     if (kIsWeb) {
       return 'http://localhost:3000'; // For web, localhost works
     } else if (Platform.isAndroid) {

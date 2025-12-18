@@ -10,7 +10,7 @@ import 'package:joyin/gen_l10n/app_localizations.dart';
 // --- IMPORT PROVIDERS ---
 import 'package:joyin/providers/locale_provider.dart';
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/providers/user_provider.dart';
+
 import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/auth_provider.dart';
 
@@ -19,8 +19,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Custom Backend Initialization (if any)
-  // Firebase initialization removed.
+  // Custom backend initialization (if any).
 
   runApp(const MyApp());
 }
@@ -33,7 +32,6 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       // --- PENDAFTARAN SEMUA PROVIDER ---
       providers: [
-        ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(
             create: (_) => PackageProvider()..hydrateFromPrefs()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),

@@ -5,13 +5,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 // IMPORT PROVIDERS & MODEL
-import '../providers/auth_provider.dart'; 
-import '../providers/user_provider.dart'; 
-import '../widgets/custom_text_field.dart'; 
-import 'widgets/profile_avatar.dart'; 
+import '../providers/auth_provider.dart';
+import '../widgets/custom_text_field.dart';
+import 'widgets/profile_avatar.dart';
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({super.key}); 
+  const EditProfilePage({super.key});
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -22,16 +21,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _dobController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
-  
+
   bool _hasChanges = false;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    
-    // Ambil Data Awal dari UserProvider
-    final user = Provider.of<UserProvider>(context, listen: false).user;
+
+    // Ambil Data Awal dari AuthProvider
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
 
     _nameController = TextEditingController(text: user?.displayName);
     _emailController = TextEditingController(text: user?.email);
@@ -54,13 +53,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   void _updateChangesStatus() {
-    final user = Provider.of<UserProvider>(context, listen: false).user;
+    final user = Provider.of<AuthProvider>(context, listen: false).user;
     if (user == null) return;
 
     final bool currentHasChanges =
         _nameController.text != (user.displayName ?? '') ||
-        _dobController.text != (user.dateOfBirth ?? '') ||
-        _phoneController.text != (user.phoneNumber ?? '');
+            _dobController.text != (user.dateOfBirth ?? '') ||
+            _phoneController.text != (user.phoneNumber ?? '');
 
     if (currentHasChanges != _hasChanges) {
       setState(() => _hasChanges = currentHasChanges);
@@ -72,8 +71,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        imageQuality: 20, // ⚠️ TURUNKAN JADI 20-30 (Agar size string kecil)
-        maxWidth: 300,    // ⚠️ KECILKAN RESOLUSI (Cukup untuk avatar bulat)
+        imageQuality: 20,
+        maxWidth: 300,
       );
 
       if (pickedFile != null && mounted) {
@@ -88,9 +87,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   // --- LOGIC 2: SIMPAN DATA TEKS (DIPERBARUI) ---
   Future<void> _saveProfile() async {
     // Validasi
-    if (_nameController.text.trim().isEmpty || _phoneController.text.trim().isEmpty) {
+    if (_nameController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama dan No. Telepon tidak boleh kosong')),
+        const SnackBar(
+            content: Text('Nama dan No. Telepon tidak boleh kosong')),
       );
       return;
     }
@@ -107,21 +108,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
   void _showPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (BuildContext bc) {
         return SafeArea(
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.photo_library), 
-                title: const Text('Ambil dari Galeri'), 
-                onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); }
-              ),
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Ambil dari Galeri'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  }),
               ListTile(
-                leading: const Icon(Icons.photo_camera), 
-                title: const Text('Gunakan Kamera'), 
-                onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); }
-              ),
+                  leading: const Icon(Icons.photo_camera),
+                  title: const Text('Gunakan Kamera'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  }),
             ],
           ),
         );
@@ -131,9 +137,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _selectDate() async {
     DateTime? picked = await showDatePicker(
-      context: context, 
-      initialDate: DateTime.now(), 
-      firstDate: DateTime(1900), 
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
       lastDate: DateTime.now(),
     );
     if (picked != null) {
@@ -146,19 +152,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<UserProvider, AuthProvider>(
-      builder: (context, userProvider, authProvider, _) {
-        final user = userProvider.user;
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        final user = authProvider.user;
         final isLoading = authProvider.isLoading;
 
         return Scaffold(
           body: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF63D1BE), Color(0xFFD6F28F)], 
-                begin: Alignment.topCenter, 
-                end: Alignment.bottomCenter
-              ),
+                  colors: [Color(0xFF63D1BE), Color(0xFFD6F28F)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter),
             ),
             child: SafeArea(
               child: Column(
@@ -166,9 +171,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white), 
-                      onPressed: () => Navigator.of(context).pop()
-                    ),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop()),
                   ),
                   Expanded(
                     child: Stack(
@@ -224,21 +228,34 @@ class _EditProfilePageState extends State<EditProfilePage> {
             child: Column(
               children: [
                 Text(
-                  _nameController.text.isNotEmpty ? _nameController.text : 'Enter Your Name',
-                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+                  _nameController.text.isNotEmpty
+                      ? _nameController.text
+                      : 'Enter Your Name',
+                  style: GoogleFonts.poppins(
+                      fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _emailController.text.isNotEmpty ? _emailController.text : 'Enter Email Address',
-                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+                  _emailController.text.isNotEmpty
+                      ? _emailController.text
+                      : 'Enter Email Address',
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 32),
-          CustomTextField(controller: _nameController, label: 'Nama', hintText: 'Enter Your Name'),
+          CustomTextField(
+              controller: _nameController,
+              label: 'Nama',
+              hintText: 'Enter Your Name'),
           const SizedBox(height: 24),
-          CustomTextField(controller: _emailController, label: 'Email', readOnly: true, hintText: 'Enter Your Email'),
+          CustomTextField(
+              controller: _emailController,
+              label: 'Email',
+              readOnly: true,
+              hintText: 'Enter Your Email'),
           const SizedBox(height: 24),
           CustomTextField(
             controller: _phoneController,
@@ -258,8 +275,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ElevatedButton(
             onPressed: (_hasChanges && !isLoading) ? _saveProfile : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _hasChanges ? const Color(0xFF63D1BE) : const Color(0xFFB0BEC5),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              backgroundColor: _hasChanges
+                  ? const Color(0xFF63D1BE)
+                  : const Color(0xFFB0BEC5),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.symmetric(vertical: 16),
               minimumSize: const Size(double.infinity, 54),
             ),
@@ -267,11 +287,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ? const SizedBox(
                     height: 20,
                     width: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
                   )
                 : Text(
                     'Simpan',
-                    style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(
+                        color: Colors.white, fontWeight: FontWeight.w600),
                   ),
           ),
         ],

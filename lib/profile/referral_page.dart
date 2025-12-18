@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_colors.dart';
 import '../core/user_model.dart';
-import '../providers/user_provider.dart';
+import '../providers/auth_provider.dart';
 
 class ReferralPage extends StatefulWidget {
   const ReferralPage({super.key});
@@ -29,7 +29,7 @@ class _ReferralPageState extends State<ReferralPage> {
     super.initState();
     _referralInputController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadReferralCode(context.read<UserProvider>().user);
+      _loadReferralCode(context.read<AuthProvider>().user);
     });
   }
 
@@ -41,9 +41,9 @@ class _ReferralPageState extends State<ReferralPage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<UserProvider>().user;
-    if (_lastUserId != user?.uid) {
-      _lastUserId = user?.uid;
+    final user = context.watch<AuthProvider>().user;
+    if (_lastUserId != user?.id) {
+      _lastUserId = user?.id;
       _loadReferralCode(user);
     }
     final referralCode = _referralCode ?? _buildReferralCode(user);
@@ -213,13 +213,13 @@ class _ReferralPageState extends State<ReferralPage> {
                   ],
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
                 child: SelectableText(
                   referralCode,
                   style: GoogleFonts.poppins(
@@ -379,9 +379,11 @@ class _ReferralPageState extends State<ReferralPage> {
           const SizedBox(height: 12),
           Column(
             children: [
-              _buildStepRow(1, 'Bagikan kode referral ke teman lewat chat atau media sosial.'),
+              _buildStepRow(1,
+                  'Bagikan kode referral ke teman lewat chat atau media sosial.'),
               const SizedBox(height: 10),
-              _buildStepRow(2, 'Teman daftar menggunakan kode kamu dan aktifkan akunnya.'),
+              _buildStepRow(2,
+                  'Teman daftar menggunakan kode kamu dan aktifkan akunnya.'),
               const SizedBox(height: 10),
               _buildStepRow(3, 'Bonus referral otomatis aktif di akun kamu.'),
             ],
@@ -455,7 +457,8 @@ class _ReferralPageState extends State<ReferralPage> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: foregroundColor, size: 18, semanticLabel: label),
+                Icon(icon,
+                    color: foregroundColor, size: 18, semanticLabel: label),
                 const SizedBox(width: 6),
                 Text(
                   label,
@@ -474,7 +477,7 @@ class _ReferralPageState extends State<ReferralPage> {
 
   Future<void> _loadReferralCode(User? user) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = 'referral_code_${user?.uid ?? 'guest'}';
+    final key = 'referral_code_${user?.id ?? 'guest'}';
     final existing = prefs.getString(key);
     if (mounted && existing != null && existing.isNotEmpty) {
       setState(() => _referralCode = existing);

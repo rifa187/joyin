@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 class GoogleButton extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
-  const GoogleButton({super.key, required this.label, required this.onTap});
+  const GoogleButton({super.key, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {

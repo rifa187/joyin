@@ -1,0 +1,59 @@
+import 'package:flutter/material.dart';
+import '../services/health_service.dart';
+
+class HealthPage extends StatefulWidget {
+  const HealthPage({super.key});
+
+  @override
+  State<HealthPage> createState() => _HealthPageState();
+}
+
+class _HealthPageState extends State<HealthPage> {
+  final service = HealthService();
+
+  String status = 'Belum dicek';
+  bool loading = false;
+
+  Future<void> check() async {
+    setState(() {
+      loading = true;
+      status = 'Mengecek /health...';
+    });
+
+    try {
+      final data = await service.check();
+      setState(() {
+        status = 'OK ✅\n$data';
+      });
+    } catch (e) {
+      setState(() {
+        status = 'GAGAL ❌\n$e';
+      });
+    } finally {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Test Backend /health')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(status),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: loading ? null : check,
+              child: Text(loading ? 'Loading...' : 'Cek Health'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

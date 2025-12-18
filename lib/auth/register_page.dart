@@ -11,6 +11,7 @@ import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
 import 'forgot_password_page.dart';
 import '../core/app_colors.dart';
+import 'package:joyin/dashboard/dashboard_gate.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -258,7 +259,17 @@ class _RegisterPageState extends State<RegisterPage> {
 
                       GoogleButton(
                         label: 'Masuk dengan Google',
-                        onTap: () => authProvider.signInWithGoogle(context),
+                        onTap: authProvider.isLoading
+                            ? null
+                            : () async {
+                                final ok = await authProvider.signInWithGoogle(context);
+                                if (!mounted || !ok) return;
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) => const DashboardGate(),
+                                  ),
+                                );
+                              },
                       ),
                       gap(20),
 

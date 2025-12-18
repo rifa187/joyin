@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/providers/dashboard_provider.dart';
 import '../core/app_colors.dart';
-import '../providers/user_provider.dart';
+import '../providers/auth_provider.dart';
 import 'widgets/profile_avatar.dart'; // Widget Avatar Canggih
 import 'edit_profile_page.dart';
 import 'settings_page.dart';
@@ -75,7 +75,8 @@ class _ProfilePageState extends State<ProfilePage>
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           title: Text(
             'Konfirmasi Keluar',
             style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
@@ -87,7 +88,8 @@ class _ProfilePageState extends State<ProfilePage>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text('Batal', style: GoogleFonts.poppins(color: Colors.grey)),
+              child:
+                  Text('Batal', style: GoogleFonts.poppins(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () {
@@ -114,13 +116,15 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) {
     // Gunakan Consumer agar halaman selalu update saat data berubah
-    return Consumer2<UserProvider, PackageProvider>(
-      builder: (context, userProvider, packageProvider, _) {
-        final user = userProvider.user;
+    return Consumer2<AuthProvider, PackageProvider>(
+      builder: (context, authProvider, packageProvider, _) {
+        final user = authProvider.user;
         final String? packageName = packageProvider.currentUserPackage;
-        final PackageTheme packageTheme = PackageThemeResolver.resolve(packageName);
+        final PackageTheme packageTheme =
+            PackageThemeResolver.resolve(packageName);
         final bool hasPackage = packageName != null && packageName.isNotEmpty;
-        final bool animateGradient = packageTheme.headerGradient.toSet().length > 1;
+        final bool animateGradient =
+            packageTheme.headerGradient.toSet().length > 1;
         final Animation<double> subscriptionFade = CurvedAnimation(
           parent: _contentController,
           curve: const Interval(0.0, 0.55, curve: Curves.easeOut),
@@ -181,7 +185,8 @@ class _ProfilePageState extends State<ProfilePage>
                     animation: _gradientController,
                     builder: (context, child) {
                       final double shift = animateGradient
-                          ? lerpDouble(-0.6, 0.6, _gradientController.value) ?? 0
+                          ? lerpDouble(-0.6, 0.6, _gradientController.value) ??
+                              0
                           : 0;
                       return Container(
                         width: double.infinity,
@@ -192,7 +197,8 @@ class _ProfilePageState extends State<ProfilePage>
                             begin: Alignment(-1 + shift, 0),
                             end: Alignment(1 + shift, 0),
                           ),
-                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
+                          borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(30)),
                         ),
                         child: child,
                       );
@@ -221,14 +227,15 @@ class _ProfilePageState extends State<ProfilePage>
                                 onTap: () => _handleLogout(context),
                                 child: const Padding(
                                   padding: EdgeInsets.all(10),
-                                  child: Icon(Icons.logout, color: Colors.white),
+                                  child:
+                                      Icon(Icons.logout, color: Colors.white),
                                 ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // Info User (Foto & Nama)
                         Row(
                           children: [
@@ -236,18 +243,20 @@ class _ProfilePageState extends State<ProfilePage>
                             // Menggunakan Widget ProfileAvatar yang sudah kita buat
                             ProfileAvatar(
                               photoUrl: user?.photoUrl,
-                              isLoading: false, // Tidak ada loading upload di sini
+                              isLoading:
+                                  false, // Tidak ada loading upload di sini
                               onEditTap: () {
                                 // Shortcut ke Edit Profil saat foto diklik
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                                  MaterialPageRoute(
+                                      builder: (_) => const EditProfilePage()),
                                 );
-                              }, 
+                              },
                             ),
-                            
+
                             const SizedBox(width: 16),
-                            
+
                             // Teks Nama & Email
                             Expanded(
                               child: Column(
@@ -265,7 +274,8 @@ class _ProfilePageState extends State<ProfilePage>
                                   Text(
                                     user?.email ?? 'email@contoh.com',
                                     style: GoogleFonts.poppins(
-                                      color: Colors.white.withAlpha((255 * 0.9).round()),
+                                      color: Colors.white
+                                          .withAlpha((255 * 0.9).round()),
                                       fontSize: 14,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -291,10 +301,12 @@ class _ProfilePageState extends State<ProfilePage>
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Card(
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         shadowColor: packageTheme.accent.withOpacity(0.12),
                         child: hasPackage
-                            ? _buildSubscriptionInfo(context, packageProvider.currentUserPackage!)
+                            ? _buildSubscriptionInfo(
+                                context, packageProvider.currentUserPackage!)
                             : _buildNoSubscription(context),
                       ),
                     ),
@@ -326,7 +338,8 @@ class _ProfilePageState extends State<ProfilePage>
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Card(
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         child: Column(
                           children: [
                             _buildAnimatedMenuItem(
@@ -336,7 +349,8 @@ class _ProfilePageState extends State<ProfilePage>
                               text: 'Kode Referral',
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const ReferralPage()),
+                                MaterialPageRoute(
+                                    builder: (_) => const ReferralPage()),
                               ),
                               accent: packageTheme.accent,
                             ),
@@ -346,7 +360,10 @@ class _ProfilePageState extends State<ProfilePage>
                               index: 1,
                               icon: Icons.person_outline,
                               text: 'Edit Profil',
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilePage())),
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const EditProfilePage())),
                               accent: packageTheme.accent,
                             ),
                             const Divider(height: 1),
@@ -355,7 +372,10 @@ class _ProfilePageState extends State<ProfilePage>
                               index: 2,
                               icon: Icons.settings_outlined,
                               text: 'Pengaturan',
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const SettingsPage())),
                               accent: packageTheme.accent,
                             ),
                             const Divider(height: 1),
@@ -366,7 +386,8 @@ class _ProfilePageState extends State<ProfilePage>
                               text: 'Bantuan',
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const TutorialPage()),
+                                MaterialPageRoute(
+                                    builder: (_) => const TutorialPage()),
                               ),
                               accent: packageTheme.accent,
                             ),
@@ -378,7 +399,8 @@ class _ProfilePageState extends State<ProfilePage>
                               text: 'Tentang Aplikasi',
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const AboutPage()),
+                                MaterialPageRoute(
+                                    builder: (_) => const AboutPage()),
                               ),
                               accent: packageTheme.accent,
                             ),
@@ -388,9 +410,9 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Versi Aplikasi
                 Text(
                   'Versi 1.0.0',
@@ -416,11 +438,14 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         child: const Icon(Icons.star, color: Colors.amber),
       ),
-      title: Text('Paket Aktif: $currentPackage', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-      subtitle: Text('Lihat detail dan perpanjang', style: GoogleFonts.poppins()),
+      title: Text('Paket Aktif: $currentPackage',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+      subtitle:
+          Text('Lihat detail dan perpanjang', style: GoogleFonts.poppins()),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
-        Provider.of<DashboardProvider>(context, listen: false).setSelectedIndex(4);
+        Provider.of<DashboardProvider>(context, listen: false)
+            .setSelectedIndex(4);
       },
     );
   }
@@ -488,7 +513,8 @@ class _ProfilePageState extends State<ProfilePage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.accent,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
                 'Lihat Paket',
@@ -522,14 +548,11 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         child: Icon(icon, color: accent, size: 22),
       ),
-      title: Text(
-        text, 
-        style: GoogleFonts.poppins(
-          fontWeight: FontWeight.w500,
-          fontSize: 15,
-          color: Colors.black87
-        )
-      ),
+      title: Text(text,
+          style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              color: Colors.black87)),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
       onTap: onTap,
     );
@@ -583,7 +606,8 @@ class _ProfilePageState extends State<ProfilePage>
             label: 'Edit Profil',
             accent: theme.accent,
             onTap: () {
-              navigator.push(MaterialPageRoute(builder: (_) => const EditProfilePage()));
+              navigator.push(
+                  MaterialPageRoute(builder: (_) => const EditProfilePage()));
             },
           ),
         ),
@@ -594,7 +618,8 @@ class _ProfilePageState extends State<ProfilePage>
             label: 'Referral',
             accent: theme.accent,
             onTap: () {
-              navigator.push(MaterialPageRoute(builder: (_) => const ReferralPage()));
+              navigator.push(
+                  MaterialPageRoute(builder: (_) => const ReferralPage()));
             },
           ),
         ),
@@ -660,7 +685,8 @@ class _QuickActionTile extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 label,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: Colors.black87),
+                style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700, color: Colors.black87),
                 textAlign: TextAlign.center,
               ),
             ],

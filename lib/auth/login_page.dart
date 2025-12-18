@@ -1,17 +1,21 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-// IMPORT PROVIDER BARU
-import '../providers/auth_provider.dart';
+// PROVIDER
+import 'package:joyin/providers/auth_provider.dart';
 
-// WIDGETS & PAGES
+// PAGES
+import 'package:joyin/dashboard/dashboard_gate.dart';
+import 'forgot_password_page.dart';
+import 'register_page.dart';
+
+// WIDGETS
 import '../../widgets/buttons.dart';
 import '../../widgets/misc.dart';
 import '../../widgets/gaps.dart';
-import 'dart:math' as math;
-import 'forgot_password_page.dart';
-import 'register_page.dart';
 import '../core/app_colors.dart';
 
 class LoginPage extends StatefulWidget {
@@ -21,19 +25,12 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final email = TextEditingController();
   final pass = TextEditingController();
   bool _obscureText = true;
   late final AnimationController _loaderController;
-
-  @override
-  void dispose() {
-    _loaderController.dispose();
-    email.dispose();
-    pass.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -44,7 +41,14 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     )..repeat();
   }
 
-  // Helper Widget TextField (TETAP SAMA SEPERTI KODE KAMU)
+  @override
+  void dispose() {
+    _loaderController.dispose();
+    email.dispose();
+    pass.dispose();
+    super.dispose();
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -82,10 +86,44 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     );
   }
 
+  Future<void> _doLogin() async {
+    final auth = context.read<AuthProvider>();
+    final e = email.text.trim();
+    final p = pass.text;
+
+    if (e.isEmpty || p.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mohon isi Email dan Password'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await auth.login(e, p);
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardGate()),
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(auth.error ?? 'Login gagal'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 1. Panggil AuthProvider (Si Otak)
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authProvider = context.watch<AuthProvider>();
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Scaffold(
@@ -131,23 +169,31 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                         gap(26),
 
-                        // INPUT EMAIL
-                        _buildTextField(controller: email, hint: 'Masukkan Alamat Email'),
+                        _buildTextField(
+                          controller: email,
+                          hint: 'Masukkan Alamat Email',
+                        ),
                         gap(16),
 
-                        // INPUT PASSWORD
-                        _buildTextField(controller: pass, hint: 'Masukkan Password Anda', isPassword: true),
+                        _buildTextField(
+                          controller: pass,
+                          hint: 'Masukkan Password Anda',
+                          isPassword: true,
+                        ),
                         gap(10),
 
-                        // FORGOT PASSWORD
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
-                              );
-                            },
+                            onPressed: authProvider.isLoading
+                                ? null
+                                : () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const ForgotPasswordPage(),
+                                      ),
+                                    );
+                                  },
                             style: TextButton.styleFrom(padding: EdgeInsets.zero),
                             child: Text(
                               'Lupa Password?',
@@ -181,25 +227,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                             ],
                           ),
                           child: ElevatedButton(
-                            // 2. LOGIKA DI PINDAH KE SINI
-                            // Cek status loading dari Provider
-                            onPressed: authProvider.isLoading 
-                              ? null 
-                              : () {
-                                  // Validasi UI sederhana boleh tetap disini
-                                  if (email.text.trim().isEmpty || pass.text.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Mohon isi Email dan Password'), backgroundColor: AppColors.error),
-                                    );
-                                    return;
-                                  }
-                                  // Panggil fungsi di Provider
-                                  authProvider.signIn(email.text.trim(), pass.text, context);
-                                },
+                            onPressed: authProvider.isLoading ? null : _doLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.transparent,
                               shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
                             ),
                             child: authProvider.isLoading
                                 ? _joyLoader(size: 26, stroke: 4)
@@ -213,15 +247,25 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   ),
                           ),
                         ),
-                        
+
                         gap(20),
                         const DividerWithText(text: 'atau'),
                         gap(14),
 
                         GoogleButton(
                           label: 'Masuk dengan Google',
-                          // 3. Panggil fungsi Google Sign In Provider
-                          onTap: () => authProvider.signInWithGoogle(context),
+                          onTap: authProvider.isLoading
+                              ? null
+                              : () async {
+                                  final ok =
+                                      await authProvider.signInWithGoogle(context);
+                                  if (!mounted || !ok) return;
+                                  Navigator.of(context).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (_) => const DashboardGate(),
+                                    ),
+                                  );
+                                },
                         ),
 
                         gap(20),
@@ -233,11 +277,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               style: GoogleFonts.poppins(color: AppColors.textSecondary),
                             ),
                             GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(builder: (_) => const RegisterPage()),
-                                );
-                              },
+                              onTap: authProvider.isLoading
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const RegisterPage()),
+                                      );
+                                    },
                               child: Text(
                                 'Daftar',
                                 style: GoogleFonts.poppins(
@@ -255,8 +301,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               ),
             ),
           ),
-          
-          // Overlay Loading (Optional, karena tombol sudah loading)
+
+          // Overlay Loading
           if (authProvider.isLoading)
             Container(
               color: Colors.black.withOpacity(0.55),
@@ -310,11 +356,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const SweepGradient(
-                colors: [
-                  AppColors.grad1,
-                  AppColors.grad3,
-                  AppColors.grad1,
-                ],
+                colors: [AppColors.grad1, AppColors.grad3, AppColors.grad1],
                 stops: [0.0, 0.65, 1.0],
               ),
               boxShadow: [

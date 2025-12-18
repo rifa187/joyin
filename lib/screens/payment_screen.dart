@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:joyin/dashboard/dashboard_gate.dart';
 import 'package:joyin/providers/package_provider.dart';
-import 'package:joyin/providers/user_provider.dart';
+import 'package:joyin/providers/auth_provider.dart';
 
 // Custom TextInputFormatter for credit card numbers (XXXX XXXX XXXX XXXX)
 class CreditCardNumberFormatter extends TextInputFormatter {
@@ -637,7 +637,7 @@ class PaymentScreenState extends State<PaymentScreen> {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () async {
-          final userProvider = Provider.of<UserProvider>(
+          final userProvider = Provider.of<AuthProvider>(
             context,
             listen: false,
           );
