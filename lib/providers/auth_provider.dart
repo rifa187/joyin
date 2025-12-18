@@ -423,7 +423,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _oauth.signInWithGoogle();
     } catch (e) {
-      await sub.cancel();
+      await sub?.cancel();
       _isLoading = false;
       notifyListeners();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -451,7 +451,7 @@ class AuthProvider extends ChangeNotifier {
       },
     );
 
-    await sub.cancel();
+    await sub?.cancel();
     return result;
   }
 }

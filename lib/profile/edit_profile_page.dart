@@ -275,12 +275,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ElevatedButton(
             onPressed: (_hasChanges && !isLoading) ? _saveProfile : null,
             style: ElevatedButton.styleFrom(
+<<<<<<< Updated upstream
               backgroundColor: _hasChanges
                   ? const Color(0xFF63D1BE)
                   : const Color(0xFFB0BEC5),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
               padding: const EdgeInsets.symmetric(vertical: 16),
+=======
+              backgroundColor: _hasChanges ? const Color(0xFF63D1BE) : const Color(0xFFB0BEC5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),         padding: const EdgeInsets.symmetric(vertical: 16),
+>>>>>>> Stashed changes
               minimumSize: const Size(double.infinity, 54),
             ),
             child: isLoading
