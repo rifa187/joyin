@@ -669,14 +669,14 @@ class _BotSettingsPageState extends State<BotSettingsPage> with SingleTickerProv
     return Switch(
       value: value,
       onChanged: onChanged,
-      trackColor: WidgetStateProperty.resolveWith<Color?>(
-        (states) => states.contains(WidgetState.selected) ? accent : Colors.grey.shade300,
+      trackColor: MaterialStateProperty.resolveWith<Color?>(
+        (states) => states.contains(MaterialState.selected) ? accent : Colors.grey.shade300,
       ),
-      thumbColor: WidgetStateProperty.resolveWith<Color?>(
-        (states) => states.contains(WidgetState.selected) ? Colors.white : Colors.grey.shade50,
+      thumbColor: MaterialStateProperty.resolveWith<Color?>(
+        (states) => states.contains(MaterialState.selected) ? Colors.white : Colors.grey.shade50,
       ),
-      trackOutlineColor: WidgetStateProperty.resolveWith<Color?>(
-        (states) => states.contains(WidgetState.selected) ? accent.withOpacity(0.4) : Colors.transparent,
+      trackOutlineColor: MaterialStateProperty.resolveWith<Color?>(
+        (states) => states.contains(MaterialState.selected) ? accent.withOpacity(0.4) : Colors.transparent,
       ),
     );
   }

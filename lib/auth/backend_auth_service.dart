@@ -18,14 +18,14 @@ class BackendAuthService {
     if (Env.apiBaseUrl.isNotEmpty) return Env.apiBaseUrl;
 
     if (kIsWeb) {
-      return 'http://localhost:3000'; // For web, localhost works
+      return 'http://localhost:3000/api'; // For web, localhost works
     } else if (Platform.isAndroid) {
-      // For Android emulator, 10.0.2.2 points to the host machine
-      // For physical Android device, replace with your machine's IP address (e.g., 'http://192.168.1.X:3000')
-      return 'http://10.0.2.2:3000';
+      // For Android emulator, 10.0.2.2 points to the host machine (still local)
+      // Set API_BASE_URL via --dart-define for physical devices instead of hardcoding IPs
+      return 'http://10.0.2.2:3000/api';
     }
     // Default or other platforms
-    return 'http://localhost:3000';
+    return 'http://localhost:3000/api';
   }
 
   Future<User?> login(String email, String password) async {
@@ -49,13 +49,16 @@ class BackendAuthService {
         await prefs.setString('refresh_token', refreshToken);
 
         return User(
-          uid: data['id'] ?? '',
-          email: data['email'],
-          displayName: data['name'],
+          id: data['id']?.toString() ?? '',
+          email: data['email'] ?? email,
+          displayName: data['name'] ?? data['email'] ?? '',
           phoneNumber: data['phone'],
-          dateOfBirth: data['birthDate'] != null ? DateTime.parse(data['birthDate']).toIso8601String() : null,
-          hasPurchasedPackage: false, // This will be updated later
-          isAdmin: data['role'] == 'admin' || data['isAdmin'] == true,
+          dateOfBirth: data['birthDate'],
+          role: data['role']?.toString(),
+          plan: data['plan']?.toString(),
+          photoUrl: data['avatar'],
+          hasPurchasedPackage:
+              (data['plan'] != null && data['plan'] != 'free') || data['hasPurchasedPackage'] == true,
         );
       }
       return null;

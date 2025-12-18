@@ -20,10 +20,11 @@ class LocalAuthService {
       await _secureStorage.write(key: _phoneNumberKey, value: phoneNumber);
     }
     return User(
-      uid: 'local_user',
+      id: 'local_user',
       email: email,
       displayName: displayName ?? email,
-      isAdmin: email.toLowerCase().contains('admin'),
+      role: email.toLowerCase().contains('admin') ? 'ADMIN' : 'USER',
+      hasPurchasedPackage: false,
     );
   }
 
@@ -37,19 +38,20 @@ class LocalAuthService {
       final dateOfBirth = await _secureStorage.read(key: _dateOfBirthKey);
 
       return User(
-        uid: 'local_user',
+        id: 'local_user',
         email: email,
         displayName: displayName ?? email,
         phoneNumber: phoneNumber,
         dateOfBirth: dateOfBirth,
-        isAdmin: email.toLowerCase().contains('admin'),
+        role: email.toLowerCase().contains('admin') ? 'ADMIN' : 'USER',
+        hasPurchasedPackage: false,
       );
     }
     return null;
   }
 
   Future<void> saveUserProfile(User user) async {
-    if (user.displayName != null) {
+    if (user.displayName.isNotEmpty) {
       await _secureStorage.write(key: _displayNameKey, value: user.displayName);
     }
     if (user.phoneNumber != null) {

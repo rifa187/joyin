@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-import 'login_page.dart';
+import '../auth/login_page.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
@@ -15,7 +15,10 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<AuthProvider>().restoreSession());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<AuthProvider>().restoreSession();
+    });
   }
 
   @override

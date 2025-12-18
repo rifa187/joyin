@@ -2,7 +2,7 @@ class Env {
   static const String apiBaseUrl =
       String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.100.114:3000',
+    defaultValue: 'http://localhost:3000',
   );
 
   /// Optional path prefix for all APIs (e.g. /api or /api/v1).
