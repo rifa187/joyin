@@ -656,7 +656,9 @@ class PaymentScreenState extends State<PaymentScreen> {
 
           final currentUser = userProvider.user;
           if (currentUser != null) {
-            final updatedUser = currentUser.copyWith(
+            await userProvider.refreshProfile();
+            final refreshedUser = userProvider.user ?? currentUser;
+            final updatedUser = refreshedUser.copyWith(
               hasPurchasedPackage: true,
               // packageDurationMonths removed from model
             );

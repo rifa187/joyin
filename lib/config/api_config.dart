@@ -22,4 +22,5 @@ class ApiConfig {
 
   static const String sendOtpEndpoint = "/send-otp";
   static const String verifyOtpEndpoint = "/verify-otp";
+  static const String premiumChatEndpoint = "/ai/chat";
 }

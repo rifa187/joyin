@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uni_links/uni_links.dart';
+import 'package:app_links/app_links.dart';
 
 import '../services/auth_api_service.dart';
 import '../services/profile_api_service.dart';
@@ -16,6 +16,19 @@ class AuthProvider extends ChangeNotifier {
   final TokenStorage _tokenStorage = TokenStorage();
   final ProfileApiService _profileApi = ProfileApiService();
   final oauth.AuthService _oauth = oauth.AuthService();
+  final AppLinks _appLinks = AppLinks();
+
+  Map<String, dynamic> _extractUserPayload(Map<String, dynamic> data) {
+    final userData = data['user'];
+    if (userData is Map<String, dynamic>) {
+      return userData;
+    }
+    final payload = data['data'];
+    if (payload is Map<String, dynamic>) {
+      return payload;
+    }
+    return data;
+  }
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -154,17 +167,32 @@ class AuthProvider extends ChangeNotifier {
       _accessToken = token;
 
       final meData = await _profileApi.me(token);
-      if (meData['user'] is Map<String, dynamic>) {
-        _user = User.fromJson(meData['user'] as Map<String, dynamic>);
-      } else {
-        _user = User.fromJson(meData);
-      }
+      _user = User.fromJson(_extractUserPayload(meData));
     } catch (e) {
       // token invalid -> bersihkan
       await logout();
       _error = e.toString();
     } finally {
       _initialized = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshProfile() async {
+    _error = null;
+
+    try {
+      final token = _accessToken ?? await _tokenStorage.getAccessToken();
+      if (token == null || token.isEmpty) {
+        return;
+      }
+
+      _accessToken = token;
+      final meData = await _profileApi.me(token);
+      _user = User.fromJson(_extractUserPayload(meData));
+    } catch (e) {
+      _error = e.toString();
+    } finally {
       notifyListeners();
     }
   }
@@ -196,14 +224,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final trimmedDob = (dob ?? '').trim();
       final data = {
         'name': name,
         'phone': phone,
-        // Backend key for birthDate might be 'birthDate' or 'date_of_birth'
-        // Checking User.fromJson, it maps 'birthDate'.
-        // But we are sending. 'ProfileApiService' expects Map to send.
-        // Let's assume backend accepts 'birthDate'.
-        if (dob != null) 'birthDate': dob,
+        if (trimmedDob.isNotEmpty)
+          // Only send birthDate if user set it; backend may ignore this field.
+          'birthDate': trimmedDob,
       };
 
       final updatedData = await _profileApi.updateProfile(_accessToken!, data);
@@ -401,7 +428,7 @@ class AuthProvider extends ChangeNotifier {
       }
     }
 
-    sub = uriLinkStream.listen(
+    sub = _appLinks.uriLinkStream.listen(
       (uri) {
         unawaited(handleUri(uri));
       },

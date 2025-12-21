@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:joyin/chat/chat_message.dart';
 import 'package:joyin/providers/package_provider.dart';
+import 'package:joyin/providers/chat_provider.dart';
 import 'package:joyin/widgets/locked_feature_widget.dart';
 import 'package:provider/provider.dart';
 import '../package/package_theme.dart';
@@ -18,6 +20,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   late final Animation<double> _cardSlide;
   late final Animation<double> _contentFade;
   late final Animation<Offset> _contentSlide;
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -47,12 +51,30 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
     _entranceController.dispose();
     super.dispose();
   }
 
+  Future<void> _handleSend(ChatProvider chatProvider) async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    _messageController.clear();
+    await chatProvider.sendMessage(text);
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent + 80,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final chatProvider = context.watch<ChatProvider>();
     final packageProvider = context.watch<PackageProvider>();
     final bool hasPackage =
         packageProvider.currentUserPackage != null && packageProvider.currentUserPackage!.isNotEmpty;
@@ -83,9 +105,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                     begin: const Offset(0, 0.2),
                     end: Offset.zero,
                   ).animate(_cardSlide),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(36),
@@ -102,7 +124,11 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                             opacity: _contentFade,
                             child: SlideTransition(
                               position: _contentSlide,
-                              child: _buildChatBody(accent),
+                              child: _buildChatBody(
+                                accent,
+                                chatProvider.messages,
+                                chatProvider,
+                              ),
                             ),
                           )
                         : const LockedFeatureWidget(
@@ -177,19 +203,31 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildChatBody(Color accent) {
+  Widget _buildChatBody(
+    Color accent,
+    List<ChatMessage> messages,
+    ChatProvider chatProvider,
+  ) {
     return Column(
       children: [
         const SizedBox(height: 12),
         _buildHeaderTile(accent),
         const SizedBox(height: 16),
-        _buildAnimatedCard(_buildEmptyState(accent)),
+        _buildAnimatedCard(
+          messages.isEmpty
+              ? _buildEmptyState(accent)
+              : _buildConversation(accent, messages, chatProvider.isSending),
+        ),
         const SizedBox(height: 14),
         _buildAnimatedCard(_buildQuickActions(accent)),
         const SizedBox(height: 14),
         _buildAnimatedCard(_buildFilters(accent)),
         const SizedBox(height: 20),
-        _buildAnimatedCard(_buildCTA(accent)),
+        _buildAnimatedCard(_buildCTA(accent, chatProvider)),
+        if (chatProvider.error != null) ...[
+          const SizedBox(height: 12),
+          _buildErrorBanner(chatProvider.error!, accent),
+        ],
       ],
     );
   }
@@ -374,31 +412,72 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildCTA(Color accent) {
+  Widget _buildCTA(Color accent, ChatProvider chatProvider) {
     return Column(
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: accent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _messageController,
+                maxLines: 4,
+                minLines: 1,
+                decoration: InputDecoration(
+                  hintText: 'Tulis pesan ke bot...',
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: accent, width: 1.4),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                ),
+                onSubmitted: (_) => _handleSend(chatProvider),
               ),
-              elevation: 4,
-              shadowColor: accent.withOpacity(0.4),
             ),
-            onPressed: () {},
-            child: Text(
-              'Mulai Obrolan',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 4,
+                  shadowColor: accent.withOpacity(0.4),
+                ),
+                onPressed: chatProvider.isSending
+                    ? null
+                    : () => _handleSend(chatProvider),
+                child: chatProvider.isSending
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(accent.computeLuminance() > 0.5
+                              ? Colors.black87
+                              : Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded),
               ),
             ),
-          ),
+          ],
         ),
         const SizedBox(height: 10),
         Text(
@@ -407,6 +486,129 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  Widget _buildConversation(
+    Color accent,
+    List<ChatMessage> messages,
+    bool isSending,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 320,
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                final msg = messages[index];
+                final isUser = msg.sender == ChatSender.user;
+                return Align(
+                  alignment:
+                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    constraints: const BoxConstraints(maxWidth: 260),
+                    decoration: BoxDecoration(
+                      color: isUser ? accent.withOpacity(0.15) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isUser ? accent.withOpacity(0.25) : Colors.grey.shade200,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isUser ? 'Kamu' : 'Bot',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: isUser ? accent : Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          msg.content,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (isSending)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(accent),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Menunggu balasan...',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.5,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(String message, Color accent) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

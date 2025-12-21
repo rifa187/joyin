@@ -23,10 +23,23 @@ class User {
 
   // Factory untuk membuat User dari JSON Backend
   factory User.fromJson(Map<String, dynamic> json) {
+    final rawName = (json['name'] ??
+            json['nama'] ??
+            json['full_name'] ??
+            json['displayName'] ??
+            json['fullName'] ??
+            json['username'])
+        ?.toString()
+        .trim();
+    final email = json['email']?.toString() ?? '';
+    final fallbackName = email.contains('@') ? email.split('@').first : email;
+    final resolvedName =
+        (rawName != null && rawName.isNotEmpty) ? rawName : fallbackName;
+
     return User(
       id: json['id']?.toString() ?? '',
       email: json['email'] ?? '',
-      displayName: json['name'] ?? 'No Name',
+      displayName: resolvedName.isNotEmpty ? resolvedName : 'User',
       phoneNumber: json['phone'],
       dateOfBirth: json['birthDate'],
       role: json['role'],

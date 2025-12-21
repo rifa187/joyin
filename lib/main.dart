@@ -10,6 +10,7 @@ import 'package:joyin/gen_l10n/app_localizations.dart';
 // --- IMPORT PROVIDERS ---
 import 'package:joyin/providers/locale_provider.dart';
 import 'package:joyin/providers/package_provider.dart';
+import 'package:joyin/providers/chat_provider.dart';
 
 import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/auth_provider.dart';
@@ -38,6 +39,14 @@ class MyApp extends StatelessWidget {
 
         // ✅ Provider Otentikasi (Penting untuk Login/Regis)
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (_) => ChatProvider(),
+          update: (_, auth, chat) {
+            chat ??= ChatProvider();
+            chat.bindAuth(auth);
+            return chat;
+          },
+        ),
 
         ChangeNotifierProvider(
           create: (_) => LocaleProvider(const Locale('id')),
@@ -125,3 +134,5 @@ class _AuthWrapperState extends State<AuthWrapper> {
     );
   }
 }
+
+

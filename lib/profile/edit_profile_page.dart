@@ -32,10 +32,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // Ambil Data Awal dari AuthProvider
     final user = Provider.of<AuthProvider>(context, listen: false).user;
 
-    _nameController = TextEditingController(text: user?.displayName);
-    _emailController = TextEditingController(text: user?.email);
-    _dobController = TextEditingController(text: user?.dateOfBirth);
-    _phoneController = TextEditingController(text: user?.phoneNumber);
+    _nameController = TextEditingController(text: user?.displayName ?? '');
+    _emailController = TextEditingController(text: user?.email ?? '');
+    _dobController = TextEditingController(text: user?.dateOfBirth ?? '');
+    _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
 
     // Deteksi Perubahan
     _nameController.addListener(_updateChangesStatus);

@@ -11,11 +11,11 @@ class ProfileApiService {
     _dio.options.receiveTimeout = const Duration(seconds: 10);
   }
 
-  /// GET /users/me
+  /// GET /profile
   Future<Map<String, dynamic>> me(String accessToken) async {
     try {
       final response = await _dio.get(
-        '/users/me',
+        '/profile',
         options: Options(headers: {
           'Authorization': 'Bearer $accessToken',
           'Accept': 'application/json',
@@ -27,12 +27,12 @@ class ProfileApiService {
     }
   }
 
-  /// PUT /users/me (Update Profile)
+  /// PUT /profile (Update Profile)
   Future<Map<String, dynamic>> updateProfile(
       String accessToken, Map<String, dynamic> data) async {
     try {
       final response = await _dio.put(
-        '/users/me',
+        '/profile',
         data: data,
         options: Options(headers: {
           'Authorization': 'Bearer $accessToken',
@@ -45,7 +45,7 @@ class ProfileApiService {
     }
   }
 
-  /// POST /users/me/avatar (Upload Avatar)
+  /// PUT /profile/avatar (Upload Avatar)
   Future<Map<String, dynamic>> uploadAvatar(
       String accessToken, XFile file) async {
     try {
@@ -54,8 +54,8 @@ class ProfileApiService {
         "avatar": await MultipartFile.fromFile(file.path, filename: fileName),
       });
 
-      final response = await _dio.post(
-        '/users/me/avatar',
+      final response = await _dio.put(
+        '/profile/avatar',
         data: formData,
         options: Options(headers: {
           'Authorization': 'Bearer $accessToken',
