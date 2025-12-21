@@ -87,11 +87,7 @@ class AuthProvider extends ChangeNotifier {
       // Coba refresh profil dari backend jika endpoint tersedia
       try {
         final meData = await _profileApi.me(accessToken);
-        if (meData['user'] is Map<String, dynamic>) {
-          _user = User.fromJson(meData['user'] as Map<String, dynamic>);
-        } else {
-          _user = User.fromJson(meData);
-        }
+        _user = User.fromJson(_extractUserPayload(meData));
       } catch (_) {
         // Abaikan jika endpoint tidak tersedia; sudah punya data dari login
       }
