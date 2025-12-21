@@ -15,4 +15,7 @@ class Env {
 
   static const bool useBackendAuth =
       bool.fromEnvironment('USE_BACKEND_AUTH', defaultValue: false);
+
+  static const String googleWebClientId =
+      String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: '');
 }

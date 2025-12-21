@@ -1,22 +1,21 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:app_links/app_links.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../services/auth_api_service.dart';
 import '../services/profile_api_service.dart';
 import '../services/token_storage.dart';
 import '../core/user_model.dart';
 import '../auth/otp_verification_page.dart';
-import '../auth/auth_service.dart' as oauth;
+import '../core/env.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthApiService _api = AuthApiService();
   final TokenStorage _tokenStorage = TokenStorage();
   final ProfileApiService _profileApi = ProfileApiService();
-  final oauth.AuthService _oauth = oauth.AuthService();
-  final AppLinks _appLinks = AppLinks();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: Env.googleWebClientId.isEmpty ? null : Env.googleWebClientId,
+  );
 
   Map<String, dynamic> _extractUserPayload(Map<String, dynamic> data) {
     final userData = data['user'];
@@ -28,6 +27,34 @@ class AuthProvider extends ChangeNotifier {
       return payload;
     }
     return data;
+  }
+
+  User _mergeUser(User incoming) {
+    final current = _user;
+    if (current == null) return incoming;
+
+    final incomingName = incoming.displayName.trim();
+    final fallbackName = current.displayName.trim();
+    final resolvedName = (incomingName.isEmpty || incomingName == 'User')
+        ? fallbackName
+        : incomingName;
+
+    final resolvedPhoto = incoming.photoUrl ?? current.photoUrl;
+    final resolvedPhone = incoming.phoneNumber ?? current.phoneNumber;
+    final resolvedDob = incoming.dateOfBirth ?? current.dateOfBirth;
+    final resolvedRole = incoming.role ?? current.role;
+    final resolvedPlan = incoming.plan ?? current.plan;
+
+    return current.copyWith(
+      displayName: resolvedName,
+      photoUrl: resolvedPhoto,
+      phoneNumber: resolvedPhone,
+      dateOfBirth: resolvedDob,
+      role: resolvedRole,
+      plan: resolvedPlan,
+      hasPurchasedPackage:
+          incoming.hasPurchasedPackage || current.hasPurchasedPackage,
+    );
   }
 
   bool _isLoading = false;
@@ -87,7 +114,7 @@ class AuthProvider extends ChangeNotifier {
       // Coba refresh profil dari backend jika endpoint tersedia
       try {
         final meData = await _profileApi.me(accessToken);
-        _user = User.fromJson(_extractUserPayload(meData));
+        _user = _mergeUser(User.fromJson(_extractUserPayload(meData)));
       } catch (_) {
         // Abaikan jika endpoint tidak tersedia; sudah punya data dari login
       }
@@ -163,7 +190,7 @@ class AuthProvider extends ChangeNotifier {
       _accessToken = token;
 
       final meData = await _profileApi.me(token);
-      _user = User.fromJson(_extractUserPayload(meData));
+      _user = _mergeUser(User.fromJson(_extractUserPayload(meData)));
     } catch (e) {
       // token invalid -> bersihkan
       await logout();
@@ -185,7 +212,7 @@ class AuthProvider extends ChangeNotifier {
 
       _accessToken = token;
       final meData = await _profileApi.me(token);
-      _user = User.fromJson(_extractUserPayload(meData));
+      _user = _mergeUser(User.fromJson(_extractUserPayload(meData)));
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -341,112 +368,60 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> signInWithGoogle(BuildContext context) async {
-    StreamSubscription<Uri?>? sub;
-    final completer = Completer<bool>();
-
     _isLoading = true;
     _error = null;
     notifyListeners();
 
-    void completeOnce(bool value) {
-      if (!completer.isCompleted) completer.complete(value);
-    }
-
-    Future<void> handleUri(Uri? uri) async {
-      if (uri == null) return;
-      if (uri.scheme != 'joyin' || uri.host != 'oauth-callback') {
-        return;
+    try {
+      if (Env.googleWebClientId.isEmpty) {
+        throw Exception('GOOGLE_WEB_CLIENT_ID belum di-set.');
       }
 
-      await sub?.cancel();
+      await _googleSignIn.signOut();
 
-      final accessToken = uri.queryParameters['accessToken'];
-      final refreshToken = uri.queryParameters['refreshToken'];
+      final account = await _googleSignIn.signIn();
+      if (account == null) {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('idToken Google tidak ditemukan.');
+      }
+
+      final response = await _api.loginWithGoogle(idToken: idToken);
+      final payload = (response['data'] is Map<String, dynamic>)
+          ? response['data'] as Map<String, dynamic>
+          : response.cast<String, dynamic>();
+
+      final accessToken =
+          (payload['accessToken'] ?? payload['token'])?.toString();
+      final refreshToken = payload['refreshToken']?.toString();
 
       if (accessToken == null || accessToken.isEmpty) {
-        _error = 'Access token tidak ditemukan di callback';
-        _isLoading = false;
-        notifyListeners();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_error!),
-            backgroundColor: Colors.red,
-          ),
-        );
-        completeOnce(false);
-        return;
+        throw Exception('Backend tidak mengembalikan accessToken.');
       }
+
+      await _tokenStorage.save(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      _accessToken = accessToken;
+      _user = User.fromJson(payload);
 
       try {
-        await _tokenStorage.save(
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-        );
+        final meData = await _profileApi.me(accessToken);
+        _user = _mergeUser(User.fromJson(_extractUserPayload(meData)));
+      } catch (_) {}
 
-        _accessToken = accessToken;
-
-        // Ambil profil dari backend bila tersedia.
-        try {
-          final meData = await _profileApi.me(accessToken);
-          if (meData['user'] is Map<String, dynamic>) {
-            _user = User.fromJson(meData['user'] as Map<String, dynamic>);
-          } else {
-            _user = User.fromJson(meData as Map<String, dynamic>);
-          }
-        } catch (_) {
-          // Fallback ke data query param jika /users/me gagal.
-          _user = User.fromJson({
-            'id': uri.queryParameters['id'] ?? '',
-            'email': uri.queryParameters['email'] ?? '',
-            'name': uri.queryParameters['name'] ?? '',
-            'avatar': uri.queryParameters['avatar'],
-            'role': uri.queryParameters['role'],
-            'plan': uri.queryParameters['plan'],
-            'birthDate': uri.queryParameters['birthDate'],
-            'phone': uri.queryParameters['phone'],
-          });
-        }
-
-        _isLoading = false;
-        notifyListeners();
-        completeOnce(true);
-      } catch (e) {
-        _error = e.toString();
-        _isLoading = false;
-        notifyListeners();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Google Sign-In gagal: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        completeOnce(false);
-      }
-    }
-
-    sub = _appLinks.uriLinkStream.listen(
-      (uri) {
-        unawaited(handleUri(uri));
-      },
-      onError: (err) {
-        _error = err.toString();
-        _isLoading = false;
-        notifyListeners();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Google Sign-In gagal: $err'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        completeOnce(false);
-      },
-      cancelOnError: true,
-    );
-
-    try {
-      await _oauth.signInWithGoogle();
+      _isLoading = false;
+      notifyListeners();
+      return true;
     } catch (e) {
-      await sub?.cancel();
       _isLoading = false;
       notifyListeners();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -457,24 +432,5 @@ class AuthProvider extends ChangeNotifier {
       );
       return false;
     }
-
-    final result = await completer.future.timeout(
-      const Duration(minutes: 2),
-      onTimeout: () {
-        _error = 'Google Sign-In timeout';
-        _isLoading = false;
-        notifyListeners();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Google Sign-In timeout'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return false;
-      },
-    );
-
-    await sub?.cancel();
-    return result;
   }
 }

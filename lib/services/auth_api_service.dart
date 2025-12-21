@@ -10,6 +10,7 @@ class AuthApiService {
   static const String _forgotPasswordPath = '/password/forgot';
   static const String _resetPasswordPath = '/password/reset';
   static const String _changePasswordPath = '/password/change';
+  static const String _googleLoginPath = '/google/mobile';
 
   Uri _authUrl(String path) => Uri.parse('${ApiConfig.authBaseUrl}$path');
   Uri _url(String path) => Uri.parse('${ApiConfig.baseUrl}$path');
@@ -184,5 +185,31 @@ class AuthApiService {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('Change password gagal: ${res.statusCode} ${res.body}');
     }
+  }
+
+  Future<Map<String, dynamic>> loginWithGoogle({
+    required String idToken,
+  }) async {
+    final res = await http.post(
+      _authUrl(_googleLoginPath),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: jsonEncode({'idToken': idToken}),
+    );
+
+    dev.log(
+      'googleLogin ${_authUrl(_googleLoginPath)} -> ${res.statusCode} ${res.body}',
+      name: 'AuthApiService',
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('Login Google gagal: ${res.statusCode} ${res.body}');
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is Map<String, dynamic>) return decoded;
+    return {'data': decoded};
   }
 }

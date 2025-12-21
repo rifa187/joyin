@@ -1,6 +1,7 @@
-import 'dart:convert'; 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:joyin/core/app_colors.dart';
+import 'package:joyin/core/env.dart';
 
 class ProfileAvatar extends StatelessWidget {
   final String? photoUrl;
@@ -20,8 +21,9 @@ class ProfileAvatar extends StatelessWidget {
 
     if (photoUrl != null && photoUrl!.isNotEmpty) {
       try {
-        if (photoUrl!.startsWith('http')) {
-          imageProvider = NetworkImage(photoUrl!);
+        final resolvedUrl = _resolvePhotoUrl(photoUrl!.trim());
+        if (resolvedUrl != null) {
+          imageProvider = NetworkImage(resolvedUrl);
         } else {
           imageProvider = MemoryImage(base64Decode(photoUrl!));
         }
@@ -84,5 +86,27 @@ class ProfileAvatar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String? _resolvePhotoUrl(String raw) {
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('/') || raw.startsWith('uploads/')) {
+      return _joinBase(Env.apiBaseUrl, raw);
+    }
+    if (raw.contains('/uploads/')) {
+      return _joinBase(Env.apiBaseUrl, raw.startsWith('/') ? raw : '/$raw');
+    }
+    return null;
+  }
+
+  String _joinBase(String base, String path) {
+    if (base.endsWith('/') && path.startsWith('/')) {
+      return '$base${path.substring(1)}';
+    }
+    if (!base.endsWith('/') && !path.startsWith('/')) {
+      return '$base/$path';
+    }
+    return '$base$path';
   }
 }
