@@ -22,14 +22,17 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
   late final Animation<Offset> _contentSlide;
   late final AnimationController _chartController;
   bool _chartVisible = false;
-  static const List<FlSpot> _interactionSpots = [
-    FlSpot(0, 1),
-    FlSpot(1, 1.5),
-    FlSpot(2, 1.2),
-    FlSpot(3, 1.9),
-    FlSpot(4, 1.5),
-    FlSpot(5, 2.2),
-    FlSpot(6, 2.0),
+  static const List<_StatusMetric> _statusMetrics = [
+    _StatusMetric('Dikirim', 898, Color(0xFF63CBA1)),
+    _StatusMetric('Terkirim', 511, Color(0xFFF6B644)),
+    _StatusMetric('Dibaca', 350, Color(0xFF8B5CF6)),
+    _StatusMetric('Gagal', 37, Color(0xFFEF6A6A)),
+  ];
+  static const List<_WeeklyMetric> _weeklyMetrics = [
+    _WeeklyMetric(sent: 180, delivered: 120, read: 90, failed: 15),
+    _WeeklyMetric(sent: 165, delivered: 110, read: 85, failed: 12),
+    _WeeklyMetric(sent: 150, delivered: 105, read: 82, failed: 10),
+    _WeeklyMetric(sent: 155, delivered: 108, read: 88, failed: 9),
   ];
 
   @override
@@ -157,12 +160,25 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 12),
-        _buildSummaryHeader(accent),
+        _buildAnimatedSection(
+          delayStart: 0.15,
+          child: _buildDateRangeRow(),
+        ),
         const SizedBox(height: 16),
-        _buildInfoGrid(accent),
-        const SizedBox(height: 20),
-        _buildChartCard(secondaryColor, accent),
+        _buildAnimatedSection(
+          delayStart: 0.25,
+          child: _buildMetricGrid(),
+        ),
+        const SizedBox(height: 18),
+        _buildAnimatedSection(
+          delayStart: 0.38,
+          child: _buildChartsSection(),
+        ),
+        const SizedBox(height: 18),
+        _buildAnimatedSection(
+          delayStart: 0.52,
+          child: Center(child: _buildDownloadButton()),
+        ),
       ],
     );
   }
@@ -224,7 +240,10 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
                             opacity: _contentFade,
                             child: SlideTransition(
                               position: _contentSlide,
-                              child: _buildReportBody(packageTheme.accent, secondaryColor),
+                              child: _buildReportBody(
+                                packageTheme.accent,
+                                secondaryColor,
+                              ),
                             ),
                           )
                         : const LockedFeatureWidget(
@@ -243,85 +262,83 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSummaryHeader(Color accent) {
+  Widget _buildDateRangeRow() {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: accent.withOpacity(0.12),
-            shape: BoxShape.circle,
+        Expanded(
+          child: _buildDateField(
+            label: 'Tanggal Mulai',
+            value: '16/11/2025',
           ),
-          child: Icon(Icons.assessment, color: accent),
         ),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ringkasan Kinerja',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Aktivitas 7 hari terakhir',
-              style: GoogleFonts.poppins(color: Colors.grey[700]),
-            ),
-          ],
+        Expanded(
+          child: _buildDateField(
+            label: 'Tanggal Akhir',
+            value: '16/12/2025',
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildInfoGrid(Color accent) {
-    final cards = [
-      ('Total Chat', '1.240', '+8% minggu lalu', Icons.chat_outlined),
-      ('Konversi', '18%', '+2% minggu lalu', Icons.trending_up),
-      ('Respons Bot', '92%', 'Rata-rata 3 dtk', Icons.bolt_outlined),
-    ];
+  Widget _buildDateField({required String label, required String value}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
+              const Icon(Icons.calendar_month_outlined,
+                  size: 16, color: Colors.grey),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 640;
-        final itemWidth = isWide ? (constraints.maxWidth - 12) / 2 : constraints.maxWidth;
+        final bool isWide = constraints.maxWidth >= 720;
+        final double itemWidth = isWide
+            ? (constraints.maxWidth - 36) / 4
+            : (constraints.maxWidth - 12) / 2;
         return Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: cards.asMap().entries.map((entry) {
+          children: _statusMetrics.asMap().entries.map((entry) {
             final index = entry.key;
-            final c = entry.value;
-            final double start = 0.2 + (index * 0.08);
-            final double end = (start + 0.4).clamp(0, 1);
-            final Animation<double> fade = CurvedAnimation(
-              parent: _entranceController,
-              curve: Interval(start, end, curve: Curves.easeOut),
-            );
-            final Animation<Offset> slide = Tween<Offset>(
-              begin: const Offset(0.12, 0),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: _entranceController,
-                curve: Interval(start, end, curve: Curves.easeOutCubic),
-              ),
-            );
-            return FadeTransition(
-              opacity: fade,
-              child: SlideTransition(
-                position: slide,
-                child: SizedBox(
-                  width: itemWidth,
-                  child: _buildInfoCard(
-                    title: c.$1,
-                    value: c.$2,
-                    subtitle: c.$3,
-                    accent: accent,
-                    icon: c.$4,
-                  ),
-                ),
+            final metric = entry.value;
+            return SizedBox(
+              width: itemWidth,
+              child: _buildAnimatedSection(
+                delayStart: 0.28 + (index * 0.06),
+                child: _buildMetricCard(metric),
               ),
             );
           }).toList(),
@@ -330,98 +347,32 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildChartCard(Color secondaryColor, Color accent) {
-    final Animation<double> chartAnim = CurvedAnimation(
-      parent: _chartController,
-      curve: Curves.easeOutCubic,
-    );
+  Widget _buildMetricCard(_StatusMetric metric) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
+        color: metric.color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: metric.color.withOpacity(0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Grafik Interaksi',
+            metric.label,
             style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: metric.color,
             ),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 200,
-            child: VisibilityDetector(
-              key: const Key('chart-visibility'),
-              onVisibilityChanged: (info) {
-                if (info.visibleFraction > 0.25 && !_chartVisible) {
-                  _chartVisible = true;
-                  _chartController.forward(from: 0);
-                } else if (info.visibleFraction < 0.05 && _chartVisible) {
-                  _chartVisible = false;
-                  _chartController.reset();
-                }
-              },
-              child: AnimatedBuilder(
-                animation: chartAnim,
-                builder: (context, _) {
-                  final double t = chartAnim.value.clamp(0, 1);
-                  final double maxX = _interactionSpots.last.x;
-                  final double sweepX = maxX * t;
-
-                  // Sweep along X axis: include full points up to sweep, then add an interpolated point.
-                  final List<FlSpot> animatedSpots = [];
-                  for (int i = 0; i < _interactionSpots.length; i++) {
-                    final FlSpot current = _interactionSpots[i];
-                    if (current.x <= sweepX) {
-                      animatedSpots.add(current);
-                      continue;
-                    }
-                    if (animatedSpots.isEmpty) {
-                      animatedSpots.add(FlSpot(0, _interactionSpots.first.y * t));
-                    } else {
-                      final FlSpot prev = animatedSpots.last;
-                      final double span = (current.x - prev.x).clamp(0.0001, double.infinity);
-                      final double ratio = ((sweepX - prev.x) / span).clamp(0, 1);
-                      final double interpY = prev.y + (current.y - prev.y) * ratio;
-                      animatedSpots.add(FlSpot(sweepX, interpY));
-                    }
-                    break;
-                  }
-
-                  return LineChart(
-                    LineChartData(
-                      borderData: FlBorderData(show: false),
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: animatedSpots,
-                          isCurved: true,
-                          color: accent,
-                          barWidth: 4,
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: accent.withOpacity(0.12 + (0.08 * t)),
-                          ),
-                          dotData: FlDotData(show: false),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+          const SizedBox(height: 6),
+          Text(
+            metric.value.toString(),
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: metric.color,
             ),
           ),
         ],
@@ -429,73 +380,345 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildInfoCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required Color accent,
-    IconData icon = Icons.trending_up,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade200,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accent),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+  Widget _buildChartsSection() {
+    final Animation<double> chartAnim = CurvedAnimation(
+      parent: _chartController,
+      curve: Curves.easeOutCubic,
+    );
+
+    return VisibilityDetector(
+      key: const Key('report-chart-visibility'),
+      onVisibilityChanged: (info) {
+        if (info.visibleFraction > 0.2 && !_chartVisible) {
+          _chartVisible = true;
+          _chartController.forward(from: 0);
+        } else if (info.visibleFraction < 0.05 && _chartVisible) {
+          _chartVisible = false;
+          _chartController.reset();
+        }
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isWide = constraints.maxWidth >= 720;
+          final Widget statusCard = _buildStatusCard(chartAnim);
+          final Widget weeklyCard = _buildWeeklyCard(chartAnim);
+          if (isWide) {
+            return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                Expanded(
+                  child: _buildAnimatedSection(
+                    delayStart: 0.44,
+                    child: statusCard,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[700],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildAnimatedSection(
+                    delayStart: 0.5,
+                    child: weeklyCard,
                   ),
                 ),
               ],
+            );
+          }
+          return Column(
+            children: [
+              _buildAnimatedSection(
+                delayStart: 0.44,
+                child: statusCard,
+              ),
+              const SizedBox(height: 12),
+              _buildAnimatedSection(
+                delayStart: 0.52,
+                child: weeklyCard,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(Animation<double> chartAnim) {
+    final total = _statusMetrics.fold<int>(0, (sum, m) => sum + m.value);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Status Pengiriman',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: _statusMetrics.map((metric) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: metric.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    metric.label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 180,
+            child: AnimatedBuilder(
+              animation: chartAnim,
+              builder: (context, _) {
+                final double t = chartAnim.value.clamp(0, 1).toDouble();
+                return Opacity(
+                  opacity: t,
+                  child: Transform.scale(
+                    scale: 0.92 + (0.08 * t),
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 50,
+                        sections: _statusMetrics.map((metric) {
+                          final value = metric.value / total * 100 * t;
+                          return PieChartSectionData(
+                            value: value,
+                            color: metric.color,
+                            radius: 26,
+                            title: '',
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildWeeklyCard(Animation<double> chartAnim) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Statistik Mingguan',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: _statusMetrics.map((metric) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: metric.color,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    metric.label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 200,
+            child: AnimatedBuilder(
+              animation: chartAnim,
+              builder: (context, _) {
+                final double t = chartAnim.value.clamp(0, 1).toDouble();
+                return Opacity(
+                  opacity: t,
+                  child: Transform.scale(
+                    scale: 0.96 + (0.04 * t),
+                    child: BarChart(
+                      BarChartData(
+                        gridData: FlGridData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          topTitles: AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                final label = 'Minggu ${index + 1}';
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    label,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        barGroups: List.generate(_weeklyMetrics.length, (index) {
+                          final week = _weeklyMetrics[index];
+                          final values = [
+                            week.sent,
+                            week.delivered,
+                            week.read,
+                            week.failed,
+                          ];
+                          return BarChartGroupData(
+                            x: index,
+                            barRods: List.generate(values.length, (i) {
+                              final color = _statusMetrics[i].color;
+                              return BarChartRodData(
+                                toY: values[i] * t,
+                                width: 8,
+                                borderRadius: BorderRadius.circular(4),
+                                color: color,
+                              );
+                            }),
+                            barsSpace: 4,
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadButton() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF5BC5A3),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.download, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'Download Excel',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedSection({
+    required double delayStart,
+    required Widget child,
+  }) {
+    final double start = delayStart.clamp(0, 0.9);
+    final double end = (start + 0.35).clamp(start + 0.05, 1);
+    final Animation<double> fade = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(start, end, curve: Curves.easeOut),
+    );
+    final Animation<Offset> slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: Interval(start, end, curve: Curves.easeOutCubic),
+      ),
+    );
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: slide, child: child),
+    );
+  }
+}
+
+class _StatusMetric {
+  final String label;
+  final int value;
+  final Color color;
+
+  const _StatusMetric(this.label, this.value, this.color);
+}
+
+class _WeeklyMetric {
+  final double sent;
+  final double delivered;
+  final double read;
+  final double failed;
+
+  const _WeeklyMetric({
+    required this.sent,
+    required this.delivered,
+    required this.read,
+    required this.failed,
+  });
 }

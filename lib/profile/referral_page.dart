@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,6 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/app_colors.dart';
 import '../core/user_model.dart';
 import '../providers/auth_provider.dart';
+import '../providers/package_provider.dart';
+import '../package/package_theme.dart';
+import '../services/referral_api_service.dart';
 
 class ReferralPage extends StatefulWidget {
   const ReferralPage({super.key});
@@ -18,87 +19,86 @@ class ReferralPage extends StatefulWidget {
 }
 
 class _ReferralPageState extends State<ReferralPage> {
-  late final TextEditingController _referralInputController;
-  String? _claimedCode;
   String? _referralCode;
   String? _lastUserId;
-  bool _isSubmitting = false;
+  final ReferralApiService _referralApi = ReferralApiService();
+  final List<_ReferralEntry> _referralEntries = [];
+  bool _isLoadingReferrals = false;
+  String? _referralError;
+  String? _lastAccessToken;
 
   @override
   void initState() {
     super.initState();
-    _referralInputController = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadReferralCode(context.read<AuthProvider>().user);
+      final authProvider = context.read<AuthProvider>();
+      _loadReferralCode(authProvider.user);
+      final token = authProvider.accessToken;
+      if (token != null && token.isNotEmpty) {
+        _fetchReferralDetails(token);
+      }
     });
-  }
-
-  @override
-  void dispose() {
-    _referralInputController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
+    final accessToken = context.watch<AuthProvider>().accessToken;
+    final packageProvider = context.watch<PackageProvider>();
+    final packageTheme =
+        PackageThemeResolver.resolve(packageProvider.currentUserPackage);
+    final accent = packageTheme.accent;
     if (_lastUserId != user?.id) {
       _lastUserId = user?.id;
       _loadReferralCode(user);
     }
     final referralCode = _referralCode ?? _buildReferralCode(user);
+    if (accessToken != null &&
+        accessToken.isNotEmpty &&
+        _lastAccessToken != accessToken) {
+      _lastAccessToken = accessToken;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchReferralDetails(accessToken);
+      });
+    }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(
-          'Program Referral',
-          style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700, color: Colors.white),
-        ),
+        title: const SizedBox.shrink(),
         centerTitle: false,
         elevation: 0,
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.grad1, AppColors.grad3],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
       ),
       body: Stack(
         children: [
-          Container(
-            height: 200,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.grad1, AppColors.grad3],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: packageTheme.headerGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
             ),
           ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                _buildHeroCard(),
-                const SizedBox(height: 16),
-                _buildCodeCard(referralCode),
-                const SizedBox(height: 16),
-                _buildInputCard(),
-                const SizedBox(height: 16),
-                _buildStepsSection(),
-                const SizedBox(height: 16),
-                _buildBenefitTiles(),
-              ],
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 8),
+                  _buildHeroSection(referralCode, accent),
+                  const SizedBox(height: 18),
+                  _buildReferralListCard(accent),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
         ],
@@ -106,371 +106,215 @@ class _ReferralPageState extends State<ReferralPage> {
     );
   }
 
-  Widget _buildHeroCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+  Widget _buildHeroSection(String referralCode, Color accent) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Ajak Teman, Dapatkan Komisi',
+          style: GoogleFonts.poppins(
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ajak teman, dapatkan bonus pengiriman & diskon upgrade paket.',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.joyin.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(Icons.card_giftcard,
-                color: AppColors.joyin, size: 28),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCodeCard(String referralCode) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [AppColors.grad1, AppColors.grad2, AppColors.grad3],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          textAlign: TextAlign.center,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.grad1.withValues(alpha: 0.2),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
+        const SizedBox(height: 6),
+        Text(
+          'Ajak temanmu pakai Joyin dan nikmati hadiahnya bareng-bareng. '
+          'Makin banyak yang gabung, makin besar keuntungannya.',
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            height: 1.4,
+            color: Colors.white.withValues(alpha: 0.85),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Kode Referral Kamu',
+                'Kode Referral Anda :',
                 style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.star_rounded,
-                        color: Colors.white.withValues(alpha: 0.9), size: 18),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Bonus aktif',
-                      style: GoogleFonts.poppins(
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: SelectableText(
+                        referralCode,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.1,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: SelectableText(
-                  referralCode,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                children: [
-                  _buildPrimaryButton(
-                    label: 'Salin',
-                    icon: Icons.copy_rounded,
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.joyin,
-                    onTap: () => _copyCode(referralCode),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPrimaryButton(
-                    label: 'Bagikan',
-                    icon: Icons.share_outlined,
-                    backgroundColor: Colors.white.withValues(alpha: 0.15),
-                    foregroundColor: Colors.white,
-                    onTap: () => _copyCode(referralCode),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _copyCode(referralCode),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: accent,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.copy_rounded, size: 16),
+                    label: Text(
+                      'Salin',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
-          ),
-          const SizedBox(height: 14),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.joyin.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.qr_code_2, color: AppColors.joyin),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Punya kode dari teman?',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _referralInputController,
-            decoration: InputDecoration(
-              hintText: 'Masukkan kode referral',
-              hintStyle: GoogleFonts.poppins(color: AppColors.textSecondary),
-              filled: true,
-              fillColor: const Color(0xFFF6F7FB),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-            ),
-            textCapitalization: TextCapitalization.characters,
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isSubmitting ? null : _handleSubmitReferral,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.joyin,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-              child: _isSubmitting
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      _claimedCode == null
-                          ? 'Aktifkan Referral'
-                          : 'Kode Aktif: $_claimedCode',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepsSection() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Cara kerjanya',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Column(
-            children: [
-              _buildStepRow(1,
-                  'Bagikan kode referral ke teman lewat chat atau media sosial.'),
-              const SizedBox(height: 10),
-              _buildStepRow(2,
-                  'Teman daftar menggunakan kode kamu dan aktifkan akunnya.'),
-              const SizedBox(height: 10),
-              _buildStepRow(3, 'Bonus referral otomatis aktif di akun kamu.'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBenefitTiles() {
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildStepRow(int step, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 32,
-          width: 32,
-          decoration: BoxDecoration(
-            color: AppColors.joyin.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: Text(
-              '$step',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                color: AppColors.joyin,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              color: AppColors.textPrimary,
-            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPrimaryButton({
-    required String label,
-    required IconData icon,
-    required Color backgroundColor,
-    required Color foregroundColor,
-    required VoidCallback onTap,
-  }) {
-    return Semantics(
-      label: label,
-      button: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon,
-                    color: foregroundColor, size: 18, semanticLabel: label),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w700,
-                    color: foregroundColor,
-                  ),
-                ),
-              ],
+  Widget _buildReferralListCard(Color accent) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Daftar Referral',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              color: accent.withValues(alpha: 0.18),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor: MaterialStateProperty.all(
+                      accent.withValues(alpha: 0.85)),
+                  headingRowHeight: 38,
+                  dataRowMinHeight: 38,
+                  dataRowMaxHeight: 42,
+                  dividerThickness: 0.6,
+                  headingTextStyle: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+                  dataTextStyle: GoogleFonts.poppins(
+                    color: AppColors.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  columnSpacing: 16,
+                  horizontalMargin: 12,
+                  columns: const [
+                    DataColumn(label: Text('No')),
+                    DataColumn(label: Text('Nama')),
+                    DataColumn(label: Text('Email')),
+                    DataColumn(label: Text('Waktu')),
+                    DataColumn(label: Text('Status')),
+                  ],
+                  rows: _referralEntries
+                      .map(
+                        (entry) => DataRow(
+                          cells: [
+                            DataCell(Text(entry.no)),
+                            DataCell(Text(entry.name)),
+                            DataCell(Text(entry.email)),
+                            DataCell(Text(entry.time)),
+                            DataCell(Text(
+                              entry.status,
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: entry.status == 'Aktif'
+                                    ? const Color(0xFF2CA76F)
+                                    : const Color(0xFFF4A340),
+                              ),
+                            )),
+                          ],
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          ),
+          if (_isLoadingReferrals) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'Memuat data referral...',
+                style: GoogleFonts.poppins(
+                    fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ),
+          ] else if (_referralError != null) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                _referralError!,
+                style: GoogleFonts.poppins(
+                    fontSize: 12, color: AppColors.error),
+              ),
+            ),
+          ] else if (_referralEntries.isEmpty) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'Belum ada referral yang terdaftar.',
+                style: GoogleFonts.poppins(
+                    fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -487,6 +331,84 @@ class _ReferralPageState extends State<ReferralPage> {
     await prefs.setString(key, generated);
     if (mounted) {
       setState(() => _referralCode = generated);
+    }
+  }
+
+  Future<void> _fetchReferralDetails(String accessToken) async {
+    if (_isLoadingReferrals) return;
+    setState(() {
+      _isLoadingReferrals = true;
+      _referralError = null;
+    });
+
+    try {
+      final response = await _referralApi.getMyReferralDetails(accessToken);
+      final payload = response['data'];
+      if (payload is Map<String, dynamic>) {
+        final backendCode = payload['myReferralCode']?.toString();
+        if (backendCode != null && backendCode.isNotEmpty) {
+          _referralCode = backendCode;
+          final prefs = await SharedPreferences.getInstance();
+          final key = 'referral_code_${_lastUserId ?? 'guest'}';
+          await prefs.setString(key, backendCode);
+        }
+
+        final list = payload['referrals'];
+        if (list is List) {
+          _referralEntries
+            ..clear()
+            ..addAll(
+              list.asMap().entries.map((entry) {
+                final index = entry.key;
+                final value = entry.value;
+                if (value is Map<String, dynamic>) {
+                  final status = value['isVerified'] == true
+                      ? 'Aktif'
+                      : 'Pending';
+                  return _ReferralEntry(
+                    no: '${index + 1}',
+                    name: (value['name'] ?? '-').toString(),
+                    email: (value['email'] ?? '-').toString(),
+                    time: _formatDateTime(value['createdAt']?.toString()),
+                    status: status,
+                  );
+                }
+                return _ReferralEntry(
+                  no: '${index + 1}',
+                  name: '-',
+                  email: '-',
+                  time: '-',
+                  status: 'Pending',
+                );
+              }),
+            );
+        } else {
+          _referralEntries.clear();
+        }
+      } else {
+        _referralEntries.clear();
+      }
+    } catch (e) {
+      _referralError = e.toString().replaceFirst('Exception: ', '');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingReferrals = false);
+      }
+    }
+  }
+
+  String _formatDateTime(String? value) {
+    if (value == null || value.isEmpty) return '-';
+    try {
+      final parsed = DateTime.parse(value).toLocal();
+      final year = parsed.year.toString().padLeft(4, '0');
+      final month = parsed.month.toString().padLeft(2, '0');
+      final day = parsed.day.toString().padLeft(2, '0');
+      final hour = parsed.hour.toString().padLeft(2, '0');
+      final minute = parsed.minute.toString().padLeft(2, '0');
+      return '$year-$month-$day $hour:$minute';
+    } catch (_) {
+      return value;
     }
   }
 
@@ -517,37 +439,20 @@ class _ReferralPageState extends State<ReferralPage> {
       ),
     );
   }
+}
 
-  Future<void> _handleSubmitReferral() async {
-    final code = _referralInputController.text.trim().toUpperCase();
-    if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Masukkan kode referral terlebih dahulu.',
-              style: GoogleFonts.poppins()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+class _ReferralEntry {
+  final String no;
+  final String name;
+  final String email;
+  final String time;
+  final String status;
 
-    setState(() => _isSubmitting = true);
-
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
-    if (!mounted) return;
-    setState(() {
-      _isSubmitting = false;
-      _claimedCode = code;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Kode $code aktif. Bonus onboarding sudah ditambahkan!',
-            style: GoogleFonts.poppins()),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.joyin,
-      ),
-    );
-  }
+  const _ReferralEntry({
+    required this.no,
+    required this.name,
+    required this.email,
+    required this.time,
+    required this.status,
+  });
 }

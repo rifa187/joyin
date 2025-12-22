@@ -44,7 +44,7 @@ class PackageThemeResolver {
     'Enterprise': PackageTheme(
       headerGradient: const [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
       cardGradient: const [Color(0xFF9C64F7), Color(0xFF5FCAAC), Color(0xFFD7EB76)],
-      backgroundGradient: const [Color(0xFFF3EEFF), Color(0xFFE8F7F2)],
+      backgroundGradient: const [Color(0xFFE2F7F0), Color(0xFFF1FCE8)],
       accent: const Color(0xFF9C64F7),
     ),
   };

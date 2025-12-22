@@ -12,6 +12,7 @@ import 'widgets/profile_avatar.dart'; // Widget Avatar Canggih
 import 'edit_profile_page.dart';
 import 'settings_page.dart';
 import 'referral_page.dart';
+import 'j_loyalty_page.dart';
 import '../tutorial/tutorial_page.dart';
 import '../auth/login_page.dart'; // Untuk navigasi setelah logout
 import '../screens/pilih_paket_screen.dart';
@@ -358,6 +359,19 @@ class _ProfilePageState extends State<ProfilePage>
                             _buildAnimatedMenuItem(
                               context,
                               index: 1,
+                              icon: Icons.loyalty,
+                              text: 'J-Loyalty',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const JLoyaltyPage()),
+                              ),
+                              accent: packageTheme.accent,
+                            ),
+                            const Divider(height: 1),
+                            _buildAnimatedMenuItem(
+                              context,
+                              index: 2,
                               icon: Icons.person_outline,
                               text: 'Edit Profil',
                               onTap: () => Navigator.push(
@@ -369,7 +383,7 @@ class _ProfilePageState extends State<ProfilePage>
                             const Divider(height: 1),
                             _buildAnimatedMenuItem(
                               context,
-                              index: 2,
+                              index: 3,
                               icon: Icons.settings_outlined,
                               text: 'Pengaturan',
                               onTap: () => Navigator.push(
@@ -381,7 +395,7 @@ class _ProfilePageState extends State<ProfilePage>
                             const Divider(height: 1),
                             _buildAnimatedMenuItem(
                               context,
-                              index: 3,
+                              index: 4,
                               icon: Icons.help_outline,
                               text: 'Bantuan',
                               onTap: () => Navigator.push(
@@ -394,7 +408,7 @@ class _ProfilePageState extends State<ProfilePage>
                             const Divider(height: 1),
                             _buildAnimatedMenuItem(
                               context,
-                              index: 4,
+                              index: 5,
                               icon: Icons.info_outline,
                               text: 'Tentang Aplikasi',
                               onTap: () => Navigator.push(

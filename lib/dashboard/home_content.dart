@@ -187,6 +187,7 @@ class _HomeContentState extends State<HomeContent>
     );
   }
 
+
   Widget _buildHeroBanner(
     String displayName,
     double topPadding,
@@ -309,15 +310,17 @@ class _HomeContentState extends State<HomeContent>
   Widget _buildHomeOverviewCardNoPackage(PackageTheme theme) {
     return Container(
       margin: EdgeInsets.zero,
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(40),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-              color: theme.accent.withOpacity(0.12),
-              blurRadius: 30,
-              offset: const Offset(0, 15))
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          )
         ],
       ),
       child: Column(
@@ -358,38 +361,75 @@ class _HomeContentState extends State<HomeContent>
   Widget _buildHomeOverviewCard(PackageTheme theme) {
     return Container(
       margin: EdgeInsets.zero,
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(40),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-              color: theme.accent.withOpacity(0.12),
-              blurRadius: 30,
-              offset: const Offset(0, 15))
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Chat Masuk',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                  fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 18),
-          _buildChatStatRow(),
-          const SizedBox(height: 24),
-          Text('Statistik Pengiriman Pesan',
-              style: GoogleFonts.poppins(
-                  fontSize: 15, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          _buildMessageLegend(),
+          Text(
+            'Chat Masuk',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 16),
-          // MENGGUNAKAN FUNGSI ASLI
-          _buildMessageVolumeChart(),
-          const SizedBox(height: 24),
-          // MENGGUNAKAN FUNGSI ASLI
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatTile(
+                  label: 'Chat Bulanan',
+                  value: '1.247',
+                  background: const Color(0xFFD7FFF5),
+                  foreground: const Color(0xFF2EA08C),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildStatTile(
+                  label: 'Chat Terjawab',
+                  value: '1.089',
+                  background: const Color(0xFFE9D9FF),
+                  foreground: const Color(0xFF7C4DFF),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildStatTile(
+                  label: 'Total Chat',
+                  value: '8.534',
+                  background: const Color(0xFFFFE1A8),
+                  foreground: const Color(0xFFE7A326),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Text(
+            'Statistik Pengiriman Pesan',
+            style: GoogleFonts.poppins(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildChartPanel(),
+          const SizedBox(height: 22),
           _buildMessageStatusChart(),
+          const SizedBox(height: 18),
+          _buildBotCard(theme),
         ],
       ),
     );
@@ -501,28 +541,183 @@ class _HomeContentState extends State<HomeContent>
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          height: 210,
-          padding: const EdgeInsets.only(top: 20, right: 20),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              const double labelSpace = 36;
-              return CustomPaint(
-                size: Size(constraints.maxWidth, constraints.maxHeight),
-                painter: ChartGridPainter(
-                  // Panggil Painter
-                  maxValue: chartTopValue,
-                  averageValue: average,
-                  labelSpace: labelSpace,
-                  leftPadding: 30,
-                ),
-                // (Logic anak-anak bar chart bisa ditambahkan di sini,
-                //  tapi Painter di atas sudah menggambar grid dasarnya)
-              );
-            },
-          ),
+        _buildMessageVolumeChartBody(
+          chartTopValue: chartTopValue,
+          average: average,
         ),
       ],
+    );
+  }
+
+  Widget _buildMessageVolumeChartBody({
+    required double chartTopValue,
+    required double average,
+  }) {
+    return Container(
+      height: 210,
+      padding: const EdgeInsets.only(top: 20, right: 20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const double labelSpace = 36;
+          return CustomPaint(
+            size: Size(constraints.maxWidth, constraints.maxHeight),
+            painter: ChartGridPainter(
+              maxValue: chartTopValue,
+              averageValue: average,
+              labelSpace: labelSpace,
+              leftPadding: 30,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatTile({
+    required String label,
+    required String value,
+    required Color background,
+    required Color foreground,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: foreground.withOpacity(0.85),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: foreground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartPanel() {
+    final stats = _monthlyStats;
+    final double maxValue =
+        stats.map((stat) => stat.value).reduce((a, b) => a > b ? a : b);
+    final double chartTopValue =
+        maxValue == 0 ? 2.0 : (maxValue / 2).ceil() * 2.0;
+    final double average =
+        stats.fold<double>(0, (sum, stat) => sum + stat.value) / stats.length;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.border),
+                  color: const Color(0xFFF8FAFC),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Pilih Tahun',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.keyboard_arrow_down,
+                        size: 16, color: AppColors.textSecondary),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildMessageVolumeChartBody(
+            chartTopValue: chartTopValue,
+            average: average,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBotCard(PackageTheme theme) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.accent.withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Customer Service Bot',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Bot layanan pelanggan yang membantu menjawab pertanyaan, memberikan panduan, dan mendukung kebutuhan pelanggan.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.accent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Kelola Bot',
+              style: GoogleFonts.poppins(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: theme.accent,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
