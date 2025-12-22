@@ -46,3 +46,6 @@ app.*.map.json
 
 .gemini/
 gha-creds-*.json
+# Environment files
+.env
+.env.*
