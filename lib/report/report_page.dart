@@ -381,9 +381,13 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
   }
 
   Widget _buildChartsSection() {
-    final Animation<double> chartAnim = CurvedAnimation(
+    final Animation<double> pieAnim = CurvedAnimation(
       parent: _chartController,
-      curve: Curves.easeOutCubic,
+      curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
+    );
+    final Animation<double> barAnim = CurvedAnimation(
+      parent: _chartController,
+      curve: const Interval(0.15, 1.0, curve: Curves.easeOutCubic),
     );
 
     return VisibilityDetector(
@@ -400,8 +404,8 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final bool isWide = constraints.maxWidth >= 720;
-          final Widget statusCard = _buildStatusCard(chartAnim);
-          final Widget weeklyCard = _buildWeeklyCard(chartAnim);
+          final Widget statusCard = _buildStatusCard(pieAnim);
+          final Widget weeklyCard = _buildWeeklyCard(barAnim);
           if (isWide) {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,6 +505,7 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
                     scale: 0.92 + (0.08 * t),
                     child: PieChart(
                       PieChartData(
+                        startDegreeOffset: -90 + (90 * (1 - t)),
                         sectionsSpace: 2,
                         centerSpaceRadius: 50,
                         sections: _statusMetrics.map((metric) {
@@ -580,8 +585,10 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
                 final double t = chartAnim.value.clamp(0, 1).toDouble();
                 return Opacity(
                   opacity: t,
-                  child: Transform.scale(
-                    scale: 0.96 + (0.04 * t),
+                  child: Transform.translate(
+                    offset: Offset(0, 10 * (1 - t)),
+                    child: Transform.scale(
+                      scale: 0.96 + (0.04 * t),
                     child: BarChart(
                       BarChartData(
                         gridData: FlGridData(show: false),
@@ -632,7 +639,7 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
                                 toY: values[i] * t,
                                 width: 8,
                                 borderRadius: BorderRadius.circular(4),
-                                color: color,
+                                color: color.withValues(alpha: 0.3 + (0.7 * t)),
                               );
                             }),
                             barsSpace: 4,
@@ -640,6 +647,7 @@ class _ReportPageState extends State<ReportPage> with TickerProviderStateMixin {
                         }),
                       ),
                     ),
+                  ),
                   ),
                 );
               },

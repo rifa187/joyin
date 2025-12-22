@@ -62,46 +62,58 @@ class _ReferralPageState extends State<ReferralPage> {
       });
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const SizedBox.shrink(),
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
+    final navColor = packageTheme.headerGradient.last;
+    final navIconBrightness =
+        navColor.computeLuminance() > 0.6 ? Brightness.dark : Brightness.light;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: navColor,
+        systemNavigationBarIconBrightness: navIconBrightness,
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: packageTheme.headerGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        appBar: AppBar(
+          title: const SizedBox.shrink(),
+          centerTitle: false,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: packageTheme.headerGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 8),
-                  _buildHeroSection(referralCode, accent),
-                  const SizedBox(height: 18),
-                  _buildReferralListCard(accent),
-                  const SizedBox(height: 32),
-                ],
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 8),
+                    _buildHeroSection(referralCode, accent),
+                    const SizedBox(height: 18),
+                    _buildReferralListCard(accent),
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
