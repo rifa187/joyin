@@ -12,6 +12,7 @@ class AppDrawer extends StatelessWidget {
   final VoidCallback onEditProfile;
   final Function(int) onItemTap;
   final VoidCallback? onAdminTap;
+  final VoidCallback? onHppTap;
 
   const AppDrawer({
     super.key,
@@ -19,6 +20,7 @@ class AppDrawer extends StatelessWidget {
     required this.onEditProfile,
     required this.onItemTap,
     this.onAdminTap,
+    this.onHppTap,
   });
 
   @override
@@ -58,6 +60,17 @@ class AppDrawer extends StatelessWidget {
               text: AppLocalizations.of(context)!.report,
               index: 2,
               onTap: () => onItemTap(2),
+            ),
+            _buildDrawerItem(
+              context: context, // Pass context
+              dashboardProvider: dashboardProvider, // Pass dashboardProvider
+              icon: Icons.calculate_outlined,
+              text: 'HPP',
+              index: -2,
+              onTap: () {
+                Navigator.of(context).pop();
+                onHppTap?.call();
+              },
             ),
             _buildDrawerItem(
               context: context, // Pass context

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../core/app_colors.dart';
+import '../package/package_detail_page.dart';
 import '../package/package_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/package_provider.dart';
@@ -24,8 +25,8 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
   String? _lastAccessToken;
   bool _isLoading = false;
   String? _error;
-  int _points = 60;
-  int _lifetimePoints = 60;
+  int _points = 0;
+  int _lifetimePoints = 0;
 
   @override
   void initState() {
@@ -149,7 +150,6 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
               ),
             ),
           ),
-          _buildFloatingStars(),
           if (_isLoading)
             Positioned(
               right: 20,
@@ -198,11 +198,16 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
   }
 
   Widget _buildHeroCard(Color accent) {
-    final int targetXp = 100;
+    final tier = _resolveTier(_lifetimePoints);
     final int currentXp = _lifetimePoints;
-    final int remainingXp = (targetXp - currentXp).clamp(0, targetXp);
-    final double progress =
-        targetXp == 0 ? 0 : (currentXp / targetXp).clamp(0.0, 1.0);
+    final int? nextThreshold = tier.nextThreshold;
+    final String? nextTierName = tier.nextTierName;
+    final int remainingXp = nextThreshold == null
+        ? 0
+        : (nextThreshold - currentXp).clamp(0, nextThreshold);
+    final double progress = nextThreshold == null || nextThreshold == 0
+        ? 1
+        : (currentXp / nextThreshold).clamp(0.0, 1.0);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
@@ -271,14 +276,18 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFE6A8),
-                        shape: BoxShape.circle,
+                    SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Image.asset(
+                        'assets/images/medalicon.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.emoji_events,
+                          size: 40,
+                          color: Color(0xFFF4B740),
+                        ),
                       ),
-                      child: const Icon(Icons.emoji_events,
-                          color: Color(0xFFF4B740)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -286,7 +295,7 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Expert',
+                            tier.label,
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -302,7 +311,7 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '2x Bonus',
+                              '${tier.multiplier}x Bonus',
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
@@ -314,7 +323,16 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                       ),
                     ),
                     OutlinedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => JLoyaltyDetailPage(
+                              accent: accent,
+                              lifetimePoints: _lifetimePoints,
+                            ),
+                          ),
+                        );
+                      },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: accent,
                         side: BorderSide(color: accent.withValues(alpha: 0.6)),
@@ -349,46 +367,74 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                             ),
                           ),
                           const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              minHeight: 8,
-                              value: progress,
-                              backgroundColor:
-                                  const Color(0xFFE8E8E8),
-                              valueColor:
-                                  const AlwaysStoppedAnimation<Color>(
-                                      Color(0xFF8ED57A)),
+                          SizedBox(
+                            height: 74,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Positioned(
+                                  left: 0,
+                                  right: 16,
+                                  top: 26,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: LinearProgressIndicator(
+                                      minHeight: 8,
+                                      value: progress,
+                                      backgroundColor:
+                                          const Color(0xFFE9F4EA),
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                              Color(0xFF8ED57A)),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: -4,
+                                  top: 2,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 56,
+                                        height: 56,
+                                        child: Image.asset(
+                                          'assets/images/milestonemedalicon.png',
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, __, ___) => const Icon(
+                                            Icons.emoji_events_outlined,
+                                            size: 38,
+                                            color: Color(0xFF5BA3E6),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 4,
+                                        child: Text(
+                                          nextThreshold?.toString() ?? 'MAX',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 8),
                           Text(
-                            '$remainingXp XP lagi untuk Master!',
+                            nextTierName == null
+                                ? 'Anda sudah di tier tertinggi.'
+                                : '$remainingXp XP lagi untuk ${nextTierName}!',
                             style: GoogleFonts.poppins(
                               fontSize: 11,
                               color: AppColors.textSecondary,
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE9F5FF),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.emoji_events_outlined,
-                          color: Color(0xFF5BA3E6)),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '50',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -404,28 +450,36 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
   Widget _buildPackagesSection(Color accent) {
     final cards = [
       _PackageCardData(
+        packageName: 'Basic',
         title: 'Paket Basic',
         price: 'Rp. 49.000,-',
         duration: 'Durasi 1 bulan',
-        bonus: '+25',
+        redeemCost: 25,
+        cashback: 4,
       ),
       _PackageCardData(
+        packageName: 'Pro',
         title: 'Paket Pro',
         price: 'Rp. 99.000,-',
         duration: 'Durasi 1 bulan',
-        bonus: '+65',
+        redeemCost: 65,
+        cashback: 9,
       ),
       _PackageCardData(
+        packageName: 'Bisnis',
         title: 'Paket Bisnis',
         price: 'Rp. 199.000,-',
         duration: 'Durasi 1 bulan',
-        bonus: '+125',
+        redeemCost: 125,
+        cashback: 19,
       ),
       _PackageCardData(
+        packageName: 'Enterprise',
         title: 'Paket Enterprise',
         price: 'Rp. 499.000,-',
         duration: 'Durasi 1 bulan',
-        bonus: '+200',
+        redeemCost: 200,
+        cashback: 49,
       ),
     ];
 
@@ -515,7 +569,7 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  data.bonus,
+                  '+${data.redeemCost}',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -540,6 +594,15 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
             style: GoogleFonts.poppins(
               fontSize: 11,
               color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Cashback +${data.cashback} poin',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: accent,
             ),
           ),
           const SizedBox(height: 12),
@@ -577,7 +640,7 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Fitur tukar bintang segera hadir.',
+                          'Tukar bintang butuh ${data.redeemCost} poin. Fitur segera hadir.',
                           style: GoogleFonts.poppins(),
                         ),
                         behavior: SnackBarBehavior.floating,
@@ -608,54 +671,35 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Detail paket segera tersedia.',
-                      style: GoogleFonts.poppins(),
+                final packageProvider =
+                    Provider.of<PackageProvider>(context, listen: false);
+                final detailPackage = packageProvider.packages.firstWhere(
+                  (p) => p.name.toLowerCase() ==
+                      data.packageName.toLowerCase(),
+                  orElse: () => packageProvider.packages.first,
+                );
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PackageDetailPage(
+                      packageInfo: detailPackage,
                     ),
-                    behavior: SnackBarBehavior.floating,
                   ),
                 );
               },
               style: TextButton.styleFrom(
                 foregroundColor: accent,
-                padding: EdgeInsets.zero,
-                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                minimumSize: const Size(88, 36),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
-                'Lihat Detail →',
+                'Lihat Detail',
                 style: GoogleFonts.poppins(
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFloatingStars() {
-    return IgnorePointer(
-      child: Stack(
-        children: const [
-          Positioned(
-            top: 70,
-            left: 22,
-            child: Icon(Icons.star, color: Color(0xFFFFF2B3), size: 18),
-          ),
-          Positioned(
-            top: 110,
-            right: 40,
-            child: Icon(Icons.star, color: Color(0xFFFFF2B3), size: 14),
-          ),
-          Positioned(
-            top: 160,
-            right: 80,
-            child: Icon(Icons.star, color: Color(0xFFFFF2B3), size: 12),
           ),
         ],
       ),
@@ -694,15 +738,516 @@ class _JLoyaltyPageState extends State<JLoyaltyPage>
 }
 
 class _PackageCardData {
+  final String packageName;
   final String title;
   final String price;
   final String duration;
-  final String bonus;
+  final int redeemCost;
+  final int cashback;
 
   const _PackageCardData({
+    required this.packageName,
     required this.title,
     required this.price,
     required this.duration,
-    required this.bonus,
+    required this.redeemCost,
+    required this.cashback,
   });
 }
+
+class _TierInfo {
+  final String label;
+  final int multiplier;
+  final int minXp;
+  final int? maxXp;
+  final Color color;
+
+  const _TierInfo({
+    required this.label,
+    required this.multiplier,
+    required this.minXp,
+    this.maxXp,
+    required this.color,
+  });
+
+  int? get nextThreshold => maxXp == null ? null : maxXp! + 1;
+
+  String? get nextTierName {
+    if (label == 'Newbie') return 'Expert';
+    if (label == 'Expert') return 'Master';
+    if (label == 'Master') return 'Legend';
+    return null;
+  }
+}
+
+_TierInfo _resolveTier(int lifetimePoints) {
+  if (lifetimePoints >= 200) {
+    return const _TierInfo(
+      label: 'Legend',
+      multiplier: 4,
+      minXp: 200,
+      maxXp: null,
+      color: Color(0xFFB0E57C),
+    );
+  }
+  if (lifetimePoints >= 100) {
+    return const _TierInfo(
+      label: 'Master',
+      multiplier: 3,
+      minXp: 100,
+      maxXp: 199,
+      color: Color(0xFF9DD977),
+    );
+  }
+  if (lifetimePoints >= 50) {
+    return const _TierInfo(
+      label: 'Expert',
+      multiplier: 2,
+      minXp: 50,
+      maxXp: 99,
+      color: Color(0xFF8ED57A),
+    );
+  }
+  return const _TierInfo(
+    label: 'Newbie',
+    multiplier: 1,
+    minXp: 0,
+    maxXp: 49,
+    color: Color(0xFF7ACC77),
+  );
+}
+
+class JLoyaltyDetailPage extends StatelessWidget {
+  final Color accent;
+  final int lifetimePoints;
+
+  const JLoyaltyDetailPage({
+    super.key,
+    required this.accent,
+    required this.lifetimePoints,
+  });
+
+  static const List<_TierInfo> _tiers = [
+    _TierInfo(
+      label: 'Newbie',
+      multiplier: 1,
+      minXp: 0,
+      maxXp: 49,
+      color: Color(0xFF85D18A),
+    ),
+    _TierInfo(
+      label: 'Expert',
+      multiplier: 2,
+      minXp: 50,
+      maxXp: 99,
+      color: Color(0xFF7ED68F),
+    ),
+    _TierInfo(
+      label: 'Master',
+      multiplier: 3,
+      minXp: 100,
+      maxXp: 199,
+      color: Color(0xFF9DDD7F),
+    ),
+    _TierInfo(
+      label: 'Legend',
+      multiplier: 4,
+      minXp: 200,
+      maxXp: null,
+      color: Color(0xFFB9E88A),
+    ),
+  ];
+
+  static const Map<String, int> _baseRewards = {
+    'Basic': 4,
+    'Pro': 9,
+    'Bisnis': 19,
+    'Enterprise': 49,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final currentTier = _resolveTier(lifetimePoints);
+    final int? nextThreshold = currentTier.nextThreshold;
+    final String? nextTier = currentTier.nextTierName;
+    final int remaining = nextThreshold == null
+        ? 0
+        : (nextThreshold - lifetimePoints).clamp(0, nextThreshold);
+    final double progress = nextThreshold == null || nextThreshold == 0
+        ? 1
+        : (lifetimePoints / nextThreshold).clamp(0.0, 1.0);
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: Text(
+          'Sistem Tier & Multiplier',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [accent.withValues(alpha: 0.9), const Color(0xFFBEEA86)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildProgressCard(
+                    currentTier: currentTier,
+                    progress: progress,
+                    remaining: remaining,
+                    nextTier: nextTier,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoCard(),
+                  const SizedBox(height: 16),
+                  ..._tiers.map((tier) => _buildTierCard(tier)).toList(),
+                  const SizedBox(height: 18),
+                  _buildComparisonTable(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressCard({
+    required _TierInfo currentTier,
+    required double progress,
+    required int remaining,
+    required String? nextTier,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: currentTier.color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.emoji_events, color: currentTier.color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      currentTier.label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: currentTier.color.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${currentTier.multiplier}x Bonus',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: currentTier.color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Progress ke tier berikutnya',
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: progress,
+              backgroundColor: const Color(0xFFE8E8E8),
+              valueColor: AlwaysStoppedAnimation<Color>(currentTier.color),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            nextTier == null
+                ? 'Anda sudah di tier tertinggi.'
+                : '$remaining XP lagi untuk $nextTier.',
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4D6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFE4A3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: Color(0xFFF0B33F)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Semakin tinggi Lifetime XP, semakin besar multiplier poin. '
+              'Poin didapat dari transaksi paket dan referral.',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                height: 1.4,
+                color: const Color(0xFF8D6A1A),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTierCard(_TierInfo tier) {
+    final rewards = _baseRewards.entries.map((entry) {
+      final value = entry.value * tier.multiplier;
+      return _RewardChip(label: entry.key, value: value);
+    }).toList();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tier.color.withValues(alpha: 0.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: tier.color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  tier.label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: tier.color,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${tier.multiplier}x',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: tier.color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Reward per transaksi',
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: rewards,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonTable() {
+    final columns =
+        _tiers.map((tier) => DataColumn(label: Text(tier.label))).toList();
+    final rows = _baseRewards.entries.map((entry) {
+      final values = _tiers
+          .map((tier) => DataCell(Text('+${entry.value * tier.multiplier}')))
+          .toList();
+      return DataRow(
+        cells: [
+          DataCell(Text(entry.key)),
+          ...values,
+        ],
+      );
+    }).toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Perbandingan Benefit Antar Tier',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columns: [
+                const DataColumn(label: Text('Paket')),
+                ...columns,
+              ],
+              rows: rows,
+              headingRowHeight: 32,
+              dataRowMinHeight: 32,
+              dataRowMaxHeight: 36,
+              headingTextStyle: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+              dataTextStyle: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+              ),
+              columnSpacing: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardChip extends StatelessWidget {
+  final String label;
+  final int value;
+
+  const _RewardChip({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4FBF1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD7EFD0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '+$value',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5DAE6F),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

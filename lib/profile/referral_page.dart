@@ -269,6 +269,7 @@ class _ReferralPageState extends State<ReferralPage> {
                     DataColumn(label: Text('No')),
                     DataColumn(label: Text('Nama')),
                     DataColumn(label: Text('Email')),
+                    DataColumn(label: Text('Paket')),
                     DataColumn(label: Text('Waktu')),
                     DataColumn(label: Text('Status')),
                   ],
@@ -279,6 +280,7 @@ class _ReferralPageState extends State<ReferralPage> {
                             DataCell(Text(entry.no)),
                             DataCell(Text(entry.name)),
                             DataCell(Text(entry.email)),
+                            DataCell(Text(entry.plan)),
                             DataCell(Text(entry.time)),
                             DataCell(Text(
                               entry.status,
@@ -374,13 +376,14 @@ class _ReferralPageState extends State<ReferralPage> {
                 final index = entry.key;
                 final value = entry.value;
                 if (value is Map<String, dynamic>) {
-                  final status = value['isVerified'] == true
+                  final status = value['isFirstPaymentDone'] == true
                       ? 'Aktif'
                       : 'Pending';
                   return _ReferralEntry(
                     no: '${index + 1}',
                     name: (value['name'] ?? '-').toString(),
                     email: (value['email'] ?? '-').toString(),
+                    plan: _formatPlan(value['plan']?.toString()),
                     time: _formatDateTime(value['createdAt']?.toString()),
                     status: status,
                   );
@@ -389,6 +392,7 @@ class _ReferralPageState extends State<ReferralPage> {
                   no: '${index + 1}',
                   name: '-',
                   email: '-',
+                  plan: '-',
                   time: '-',
                   status: 'Pending',
                 );
@@ -424,6 +428,16 @@ class _ReferralPageState extends State<ReferralPage> {
     }
   }
 
+  String _formatPlan(String? value) {
+    if (value == null || value.isEmpty) return '-';
+    final normalized = value.toUpperCase();
+    if (normalized == 'BASIC') return 'Basic';
+    if (normalized == 'PRO') return 'Pro';
+    if (normalized == 'BUSINESS') return 'Bisnis';
+    if (normalized == 'ENTERPRISE') return 'Enterprise';
+    return value;
+  }
+
   String _buildReferralCode(User? user) {
     final normalizedName = (user?.displayName ?? '').trim().toUpperCase();
     if (normalizedName.isNotEmpty) {
@@ -457,6 +471,7 @@ class _ReferralEntry {
   final String no;
   final String name;
   final String email;
+  final String plan;
   final String time;
   final String status;
 
@@ -464,6 +479,7 @@ class _ReferralEntry {
     required this.no,
     required this.name,
     required this.email,
+    required this.plan,
     required this.time,
     required this.status,
   });

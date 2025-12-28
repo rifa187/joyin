@@ -18,4 +18,7 @@ class Env {
 
   static const String googleWebClientId =
       String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: '');
+
+  static const String midtransSnapBaseUrl =
+      String.fromEnvironment('MIDTRANS_SNAP_BASE_URL', defaultValue: '');
 }

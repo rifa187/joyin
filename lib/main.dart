@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,6 +17,8 @@ import 'package:joyin/providers/chat_provider.dart';
 
 import 'package:joyin/providers/dashboard_provider.dart';
 import 'package:joyin/providers/auth_provider.dart';
+import 'package:joyin/services/payment_api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -99,6 +104,8 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   late Future<bool> _authCheck;
+  final AppLinks _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSub;
 
   @override
   void initState() {
@@ -106,6 +113,83 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // Cek status auth saat aplikasi dimulai
     _authCheck = Provider.of<AuthProvider>(context, listen: false)
         .checkAuthStatus(context);
+    _initDeepLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _initDeepLinks() async {
+    _linkSub = _appLinks.uriLinkStream.listen(
+      _handleDeepLink,
+      onError: (_) {},
+    );
+    final initial = await _appLinks.getInitialLink();
+    if (initial != null) {
+      _handleDeepLink(initial);
+    }
+  }
+
+  Future<void> _handleDeepLink(Uri uri) async {
+    if (uri.scheme != 'joyin' || uri.host != 'payment-finish') {
+      return;
+    }
+
+    final orderId = uri.queryParameters['order_id'] ??
+        uri.queryParameters['orderId'] ??
+        await _loadLastSnapOrderId();
+
+    if (orderId != null && orderId.isNotEmpty) {
+      try {
+        await PaymentApiService().syncSnapPayment(orderId: orderId);
+      } catch (_) {}
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.refreshProfile();
+
+    final user = authProvider.user;
+    if (user?.plan != null) {
+      final packageProvider =
+          Provider.of<PackageProvider>(context, listen: false);
+      final mapped = _mapPlanToPackageName(user!.plan!);
+      if (mapped != null) {
+        packageProvider.loadCurrentUserPackage(mapped);
+      }
+    }
+
+    if (!mounted) return;
+
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardGate()),
+      (route) => false,
+    );
+
+    final ctx = navigatorKey.currentContext;
+    if (ctx != null) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(
+          content: Text('Pembayaran selesai. Status paket diperbarui.'),
+        ),
+      );
+    }
+  }
+
+  String? _mapPlanToPackageName(String plan) {
+    final normalized = plan.trim().toUpperCase();
+    if (normalized == 'BASIC') return 'Basic';
+    if (normalized == 'PRO') return 'Pro';
+    if (normalized == 'BUSINESS') return 'Bisnis';
+    if (normalized == 'ENTERPRISE') return 'Enterprise';
+    return null;
+  }
+
+  Future<String?> _loadLastSnapOrderId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('last_snap_order_id');
   }
 
   @override

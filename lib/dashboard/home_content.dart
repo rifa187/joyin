@@ -46,6 +46,27 @@ class _HomeContentState extends State<HomeContent>
     PieChartData('Terkirim', 15, Color(0xFF4A90E2)),
   ];
 
+  final List<_OverviewStat> _overviewStats = const [
+    _OverviewStat(
+      label: 'Chat Bulanan',
+      value: '1.247',
+      background: Color(0xFFD7FFF5),
+      foreground: Color(0xFF2EA08C),
+    ),
+    _OverviewStat(
+      label: 'Chat Terjawab',
+      value: '1.089',
+      background: Color(0xFFE9D9FF),
+      foreground: Color(0xFF7C4DFF),
+    ),
+    _OverviewStat(
+      label: 'Total Chat',
+      value: '8.534',
+      background: Color(0xFFFFE1A8),
+      foreground: Color(0xFFE7A326),
+    ),
+  ];
+
   late final List<int> _chartYears;
   late int _selectedChartYear;
 
@@ -388,32 +409,18 @@ class _HomeContentState extends State<HomeContent>
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _buildStatTile(
-                  label: 'Chat Bulanan',
-                  value: '1.247',
-                  background: const Color(0xFFD7FFF5),
-                  foreground: const Color(0xFF2EA08C),
+              for (var index = 0; index < _overviewStats.length; index++) ...[
+                Expanded(
+                  child: _buildStatTile(
+                    label: _overviewStats[index].label,
+                    value: _overviewStats[index].value,
+                    background: _overviewStats[index].background,
+                    foreground: _overviewStats[index].foreground,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildStatTile(
-                  label: 'Chat Terjawab',
-                  value: '1.089',
-                  background: const Color(0xFFE9D9FF),
-                  foreground: const Color(0xFF7C4DFF),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildStatTile(
-                  label: 'Total Chat',
-                  value: '8.534',
-                  background: const Color(0xFFFFE1A8),
-                  foreground: const Color(0xFFE7A326),
-                ),
-              ),
+                if (index != _overviewStats.length - 1)
+                  const SizedBox(width: 10),
+              ],
             ],
           ),
           const SizedBox(height: 22),
@@ -884,6 +891,20 @@ class _MonthlyStat {
   final String label;
   final double value;
   const _MonthlyStat(this.label, this.value);
+}
+
+class _OverviewStat {
+  final String label;
+  final String value;
+  final Color background;
+  final Color foreground;
+
+  const _OverviewStat({
+    required this.label,
+    required this.value,
+    required this.background,
+    required this.foreground,
+  });
 }
 
 class _MascotFadeSlide extends StatefulWidget {

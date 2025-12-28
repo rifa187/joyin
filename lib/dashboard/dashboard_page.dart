@@ -8,6 +8,7 @@ import '../widgets/app_drawer.dart';
 import '../package/package_theme.dart';
 import '../admin/admin_orders_page.dart';
 import 'package:joyin/providers/dashboard_provider.dart';
+import '../hpp/hpp_page.dart';
 
 // PAGES IMPORT
 import 'home_content.dart';
@@ -82,6 +83,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 onAdminTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AdminOrdersPage()),
+                  );
+                },
+                onHppTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HppPage()),
                   );
                 },
                 onItemTap: (index) {

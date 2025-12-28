@@ -1,14 +1,16 @@
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:joyin/dashboard/dashboard_gate.dart';
 import 'package:joyin/providers/package_provider.dart';
 import 'package:joyin/providers/auth_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Custom TextInputFormatter for credit card numbers (XXXX XXXX XXXX XXXX)
+import '../core/env.dart';
+import '../services/payment_api_service.dart';
 class CreditCardNumberFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -62,6 +64,8 @@ class PaymentScreenState extends State<PaymentScreen> {
   int _selectedPaymentMethodIndex = 3;
   int? _selectedBankIndex;
   int? _selectedEWalletIndex;
+  bool _isProcessing = false;
+  final PaymentApiService _paymentApi = PaymentApiService();
 
   final List<Map<String, dynamic>> _paymentMethods = [
     {'label': 'Kartu Kredit', 'icon': Icons.credit_card},
@@ -636,46 +640,69 @@ class PaymentScreenState extends State<PaymentScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () async {
-          final userProvider = Provider.of<AuthProvider>(
-            context,
-            listen: false,
-          );
-          final packageProvider = Provider.of<PackageProvider>(
-            context,
-            listen: false,
-          );
-          final navigator = Navigator.of(context);
+        onPressed: _isProcessing
+            ? null
+            : () async {
+                final userProvider = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                );
+                final packageProvider = Provider.of<PackageProvider>(
+                  context,
+                  listen: false,
+                );
 
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('has_purchased_package', true);
-          await prefs.setString('selected_package', widget.packageName);
-          await prefs.setInt('selected_package_duration_months', _duration);
+                final token = userProvider.accessToken;
+                if (token == null || token.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Harap login ulang terlebih dahulu.')),
+                  );
+                  return;
+                }
 
-          if (!mounted) return;
+                final planId = _mapPlanId(widget.packageName);
+                if (planId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Paket tidak dikenali.')),
+                  );
+                  return;
+                }
 
-          final currentUser = userProvider.user;
-          if (currentUser != null) {
-            await userProvider.refreshProfile();
-            final refreshedUser = userProvider.user ?? currentUser;
-            final updatedUser = refreshedUser.copyWith(
-              hasPurchasedPackage: true,
-              // packageDurationMonths removed from model
-            );
-            userProvider.setUser(updatedUser);
-          }
+                setState(() => _isProcessing = true);
+                try {
+                  final snapResult =
+                      await _paymentApi.createSnapTransaction(planId: planId);
+                  await _saveLastSnapOrderId(snapResult.orderId);
+                  final snapUrl = _buildSnapUrl(snapResult.token);
+                  final launched = await launchUrl(
+                    Uri.parse(snapUrl),
+                    mode: LaunchMode.externalApplication,
+                  );
+                  if (!launched) {
+                    throw Exception('Gagal membuka pembayaran.');
+                  }
 
-          // Tandai paket yang aktif di provider agar dashboard & profil langsung ter-update.
-          packageProvider.loadCurrentUserPackage(widget.packageName);
-          packageProvider.selectDuration(widget.packageName, _duration);
+                  packageProvider.selectDuration(widget.packageName, _duration);
 
-          if (!mounted) return;
-
-          navigator.pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const DashboardGate()),
-            (route) => false,
-          );
-        },
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Selesaikan pembayaran di halaman Midtrans, lalu kembali ke aplikasi.',
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Pembayaran gagal: $e')),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() => _isProcessing = false);
+                  }
+                }
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF5FCAAC),
           foregroundColor: Colors.white,
@@ -686,11 +713,49 @@ class PaymentScreenState extends State<PaymentScreen> {
           elevation: 5,
           shadowColor: const Color(0xFF5FCAAC).withAlpha(102),
         ),
-        child: Text(
-          'Bayar Sekarang - Rp $formattedPrice',
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        child: _isProcessing
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                'Bayar Sekarang - Rp $formattedPrice',
+                style:
+                    GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
       ),
     );
+  }
+
+  String? _mapPlanId(String packageName) {
+    final normalized = packageName.trim().toLowerCase();
+    if (normalized == 'basic') return 'BASIC';
+    if (normalized == 'pro') return 'PRO';
+    if (normalized == 'bisnis' || normalized == 'business') return 'BUSINESS';
+    if (normalized == 'enterprise') return 'ENTERPRISE';
+    return null;
+  }
+
+  String _buildSnapUrl(String token) {
+    if (Env.midtransSnapBaseUrl.isNotEmpty) {
+      return '${Env.midtransSnapBaseUrl}/$token';
+    }
+    final base = Env.apiBaseUrl.toLowerCase();
+    final isSandbox = base.contains('localhost') ||
+        base.contains('10.0.2.2') ||
+        base.contains('127.0.0.1');
+    final host = isSandbox
+        ? 'https://app.sandbox.midtrans.com/snap/v2/vtweb'
+        : 'https://app.midtrans.com/snap/v2/vtweb';
+    return '$host/$token';
+  }
+
+  Future<void> _saveLastSnapOrderId(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_snap_order_id', orderId);
   }
 }
